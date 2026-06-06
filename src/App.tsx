@@ -1,7 +1,6 @@
-function App() {
-  return (
-    <h1 className="font-[var(--font-display)] text-brand-600 text-3xl">QuickClean</h1>
-  );
-}
+import { RouterProvider } from "@tanstack/react-router";
+import { router } from "@/app/router";
 
-export default App;
+export default function App() {
+  return <RouterProvider router={router} />;
+}

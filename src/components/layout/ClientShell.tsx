@@ -1,0 +1,76 @@
+import { Outlet, Link } from "@tanstack/react-router";
+import { Home, CalendarDays, Layers } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { RoleSwitcher } from "@/components/shared/RoleSwitcher";
+import { Brand } from "./Brand";
+import { useSession } from "@/stores/session";
+import { cn } from "@/lib/utils";
+
+const NAV = [
+  { to: "/app", label: "Inicio", icon: Home, exact: true },
+  { to: "/app/reservar", label: "Reservar", icon: CalendarDays, exact: false },
+  { to: "/app/servicios", label: "Servicios", icon: Layers, exact: false },
+];
+
+export function ClientShell() {
+  const { user } = useSession();
+  const initials = user?.name?.split(" ").map((n) => n[0]).join("").slice(0, 2) ?? "CL";
+
+  return (
+    <div className="min-h-full flex flex-col">
+      {/* Top bar */}
+      <header className="sticky top-0 z-40 border-b border-line bg-surface/95 backdrop-blur-sm">
+        <div className="mx-auto flex max-w-[1080px] items-center justify-between px-4 py-3 sm:px-6">
+          <Brand />
+          {/* Desktop nav */}
+          <nav className="hidden md:flex items-center gap-1" aria-label="Navegación cliente">
+            {NAV.map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                activeOptions={item.exact ? { exact: true } : undefined}
+                className="px-3 py-2 text-sm rounded-lg text-ink-2 hover:text-ink hover:bg-bg transition-colors"
+                activeProps={{ className: "px-3 py-2 text-sm rounded-lg text-brand-600 font-medium bg-brand-50" }}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+          <div className="flex items-center gap-3">
+            <RoleSwitcher />
+            <Avatar className="h-8 w-8">
+              <AvatarFallback className="bg-brand-100 text-brand-700 text-xs font-medium">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+        </div>
+      </header>
+
+      {/* Page content */}
+      <main className="mx-auto w-full max-w-[1080px] flex-1 px-4 py-6 sm:px-6">
+        <Outlet />
+      </main>
+
+      {/* Mobile bottom bar */}
+      <nav className="md:hidden sticky bottom-0 z-40 border-t border-line bg-surface" aria-label="Navegación móvil">
+        <div className="flex">
+          {NAV.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              activeOptions={item.exact ? { exact: true } : undefined}
+              className={cn(
+                "flex flex-1 flex-col items-center gap-1 py-3 text-xs text-muted transition-colors",
+              )}
+              activeProps={{ className: "flex flex-1 flex-col items-center gap-1 py-3 text-xs text-brand-600 font-medium" }}
+            >
+              <item.icon className="h-5 w-5" />
+              {item.label}
+            </Link>
+          ))}
+        </div>
+      </nav>
+    </div>
+  );
+}
