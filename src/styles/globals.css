@@ -1,0 +1,21 @@
+@import "tailwindcss";
+@import "@fontsource/bricolage-grotesque/700.css";
+@import "@fontsource/bricolage-grotesque/800.css";
+@import "@fontsource/hanken-grotesk/400.css";
+@import "@fontsource/hanken-grotesk/500.css";
+@import "@fontsource/hanken-grotesk/700.css";
+
+@theme {
+  --color-brand-50:#EAF2FF; --color-brand-100:#D9E8FF; --color-brand-300:#6FA4FF;
+  --color-brand-500:#1E73FF; --color-brand-600:#0B5BD6; --color-brand-700:#063A8C;
+  --color-navy:#0A2150;
+  --color-ink:#0E1B33; --color-ink-2:#3A4865; --color-muted:#7B89A3;
+  --color-line:#E6ECF4; --color-bg:#F4F7FB; --color-surface:#FFFFFF;
+  --color-success:#0FA46A; --color-warning:#E08A1E; --color-danger:#E0453B;
+  --font-display:"Bricolage Grotesque", system-ui, sans-serif;
+  --font-sans:"Hanken Grotesk", system-ui, sans-serif;
+  --radius-md:12px; --radius-lg:16px; --radius-xl:22px;
+}
+
+html, body, #root { height: 100%; }
+body { background: var(--color-bg); color: var(--color-ink); font-family: var(--font-sans); overflow-x: hidden; }
