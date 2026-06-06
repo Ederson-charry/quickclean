@@ -214,7 +214,10 @@ const routeTree = rootRoute.addChildren([
   ]),
 ]);
 
-export const router = createRouter({ routeTree });
+// BASE_URL is "/quickclean/" in the GitHub Pages build and "/" in dev.
+const basepath = import.meta.env.BASE_URL.replace(/\/$/, "") || "/";
+
+export const router = createRouter({ routeTree, basepath });
 
 declare module "@tanstack/react-router" {
   interface Register {
