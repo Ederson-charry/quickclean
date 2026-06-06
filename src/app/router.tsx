@@ -57,6 +57,8 @@ const Quickers = withSuspense(lazy(() => import("@/features/admin/Quickers")));
 const CrearQuicker = withSuspense(lazy(() => import("@/features/admin/CrearQuicker")));
 const Pagos = withSuspense(lazy(() => import("@/features/admin/Pagos")));
 const Facturacion = withSuspense(lazy(() => import("@/features/admin/Facturacion")));
+const Clientes = withSuspense(lazy(() => import("@/features/admin/Clientes")));
+const MantenimientoCliente = withSuspense(lazy(() => import("@/features/admin/MantenimientoCliente")));
 
 // ─── Root route ───────────────────────────────────────────────────────────────
 const rootRoute = createRootRoute({
@@ -188,6 +190,24 @@ const adminFacturacionRoute = createRoute({
   component: Facturacion,
 });
 
+const adminClientesRoute = createRoute({
+  getParentRoute: () => adminLayoutRoute,
+  path: "/admin/clientes",
+  component: Clientes,
+});
+
+const adminNuevoClienteRoute = createRoute({
+  getParentRoute: () => adminLayoutRoute,
+  path: "/admin/clientes/nuevo",
+  component: MantenimientoCliente,
+});
+
+const adminEditarClienteRoute = createRoute({
+  getParentRoute: () => adminLayoutRoute,
+  path: "/admin/clientes/$id",
+  component: MantenimientoCliente,
+});
+
 // ─── Route tree ───────────────────────────────────────────────────────────────
 const routeTree = rootRoute.addChildren([
   loginRoute,
@@ -211,6 +231,9 @@ const routeTree = rootRoute.addChildren([
     adminCrearQuickerRoute,
     adminPagosRoute,
     adminFacturacionRoute,
+    adminClientesRoute,
+    adminNuevoClienteRoute,
+    adminEditarClienteRoute,
   ]),
 ]);
 

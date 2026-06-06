@@ -1,5 +1,5 @@
 import { Outlet, Link } from "@tanstack/react-router";
-import { LayoutDashboard, Users, CreditCard, FileText, Menu } from "lucide-react";
+import { LayoutDashboard, Users, UserRound, CreditCard, FileText, Menu } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { RoleSwitcher } from "@/components/shared/RoleSwitcher";
@@ -11,6 +11,7 @@ import { useState } from "react";
 const NAV = [
   { to: "/admin", label: "Indicadores", icon: LayoutDashboard, exact: true },
   { to: "/admin/quickers", label: "Quickers", icon: Users, exact: false },
+  { to: "/admin/clientes", label: "Clientes", icon: UserRound, exact: false },
   { to: "/admin/pagos", label: "Pagos", icon: CreditCard, exact: false },
   { to: "/admin/facturacion", label: "Facturación", icon: FileText, exact: false },
 ];
