@@ -1,5 +1,5 @@
 import { db } from "./db";
-import type { Booking, Rating, LeaveRequest } from "./types";
+import type { Booking, Rating, LeaveRequest, Client } from "./types";
 
 const delay = (ms = 450) => new Promise((r) => setTimeout(r, ms));
 
@@ -59,4 +59,23 @@ export const api = {
     return { ok: true as const };
   },
   async adminInvoices() { await delay(); return db.invoices; },
+
+  async adminClients() { await delay(); return db.clients; },
+  async createClient(input: Omit<Client, "id">) {
+    await delay(700);
+    const c: Client = { ...input, id: crypto.randomUUID() };
+    db.clients.push(c);
+    return c;
+  },
+  async updateClient(id: string, input: Omit<Client, "id">) {
+    await delay(700);
+    const idx = db.clients.findIndex((x) => x.id === id);
+    if (idx !== -1) db.clients[idx] = { ...input, id };
+    return db.clients[idx];
+  },
+  async deleteClient(id: string) {
+    await delay(500);
+    db.clients = db.clients.filter((x) => x.id !== id);
+    return { ok: true as const };
+  },
 };

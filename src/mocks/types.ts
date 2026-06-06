@@ -56,6 +56,20 @@ export const LeaveRequest = z.object({
   status: z.enum(["en_revision", "aprobada", "rechazada"]),
 });
 
+export const Client = z.object({
+  id: z.string(),
+  name: z.string(),
+  doc: z.string(),
+  email: z.string().email(),
+  phone: z.string(),
+  address: z.string(),
+  city: z.string(),
+  type: z.enum(["persona", "empresa"]),
+  status: z.enum(["activo", "inactivo"]),
+  bookingsCount: z.number(),
+  totalSpent: z.number(),
+});
+
 export type ServiceType = z.infer<typeof ServiceType>;
 export type Frequency = z.infer<typeof Frequency>;
 export type Duration = z.infer<typeof Duration>;
@@ -67,6 +81,7 @@ export type Payout = z.infer<typeof Payout>;
 export type Invoice = z.infer<typeof Invoice>;
 export type Rating = z.infer<typeof Rating>;
 export type LeaveRequest = z.infer<typeof LeaveRequest>;
+export type Client = z.infer<typeof Client>;
 
 export type Kpis = {
   revenue: number; revenueDelta: number; completed: number; completedDelta: number;

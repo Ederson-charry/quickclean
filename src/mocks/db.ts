@@ -1,4 +1,4 @@
-import type { Quicker, Kpis, Rating, LeaveRequest, Service, Booking, ServiceAssignment, Payout, Invoice } from "./types";
+import type { Quicker, Kpis, Rating, LeaveRequest, Service, Booking, ServiceAssignment, Payout, Invoice, Client } from "./types";
 import { bookingTotal, quickerPayout } from "@/lib/pricing";
 
 // ── Quickers ──────────────────────────────────────────────────────────────────
@@ -200,6 +200,53 @@ const invoices: Invoice[] = [
   },
 ];
 
+// ── Clients ───────────────────────────────────────────────────────────────────
+
+const clients: Client[] = [
+  {
+    id: "c1", name: "Laura Gómez", doc: "1.012.345.678",
+    email: "laura.gomez@gmail.com", phone: "+57 311 234 5678",
+    address: "Cra 7 # 45-10, Chapinero", city: "Bogotá",
+    type: "persona", status: "activo", bookingsCount: 8, totalSpent: 1_240_000,
+  },
+  {
+    id: "c2", name: "Ana López", doc: "1.023.456.789",
+    email: "ana.lopez@gmail.com", phone: "+57 312 345 6789",
+    address: "Calle 85 # 11-38, Chapinero Alto", city: "Bogotá",
+    type: "persona", status: "activo", bookingsCount: 12, totalSpent: 1_870_000,
+  },
+  {
+    id: "c3", name: "Conjunto Altos del Parque", doc: "900.123.456-1",
+    email: "admin@altosdelparque.co", phone: "+57 601 789 0123",
+    address: "Cra 19 # 95-20, Usaquén", city: "Bogotá",
+    type: "empresa", status: "activo", bookingsCount: 64, totalSpent: 8_640_000,
+  },
+  {
+    id: "c4", name: "Inmobiliaria Bonanza", doc: "800.456.789-2",
+    email: "servicios@bonanza.com.co", phone: "+57 601 345 6789",
+    address: "Av. El Dorado # 68C-61, Fontibón", city: "Bogotá",
+    type: "empresa", status: "activo", bookingsCount: 38, totalSpent: 5_220_000,
+  },
+  {
+    id: "c5", name: "Claudia Mora", doc: "1.034.567.890",
+    email: "claudia.mora@gmail.com", phone: "+57 300 456 7890",
+    address: "Calle 72 # 5-83, Chapinero", city: "Bogotá",
+    type: "persona", status: "activo", bookingsCount: 5, totalSpent: 750_000,
+  },
+  {
+    id: "c6", name: "Constructora Habitat SAS", doc: "901.234.567-3",
+    email: "operaciones@habitat.co", phone: "+57 601 567 8901",
+    address: "Cra 50 # 26-20, Puente Aranda", city: "Bogotá",
+    type: "empresa", status: "inactivo", bookingsCount: 15, totalSpent: 2_100_000,
+  },
+  {
+    id: "c7", name: "Roberto Suárez", doc: "1.045.678.901",
+    email: "roberto.suarez@gmail.com", phone: "+57 318 678 9012",
+    address: "Cra 13 # 93-40, Chapinero Norte", city: "Bogotá",
+    type: "persona", status: "activo", bookingsCount: 3, totalSpent: 450_000,
+  },
+];
+
 // ── KPIs ──────────────────────────────────────────────────────────────────────
 
 const kpis: Kpis = {
@@ -228,6 +275,7 @@ export const db = {
   balance,
   payouts,
   invoices,
+  clients,
   ratings: [] as Rating[],
   leaveRequests: [] as LeaveRequest[],
   kpis,

@@ -12,6 +12,7 @@ export const useKpis = () => useQuery({ queryKey: ["kpis"], queryFn: api.adminKp
 export const useQuickers = () => useQuery({ queryKey: ["quickers"], queryFn: api.adminQuickers });
 export const usePayouts = () => useQuery({ queryKey: ["payouts"], queryFn: api.adminPayouts });
 export const useInvoices = () => useQuery({ queryKey: ["invoices"], queryFn: api.adminInvoices });
+export const useClients = () => useQuery({ queryKey: ["clients"], queryFn: api.adminClients });
 
 export function useCreateBooking() {
   const qc = useQueryClient();
@@ -40,4 +41,20 @@ export function usePayPayout() {
 export function usePayAll() {
   const qc = useQueryClient();
   return useMutation({ mutationFn: api.payAllPayouts, onSuccess: () => qc.invalidateQueries({ queryKey: ["payouts"] }) });
+}
+export function useCreateClient() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: api.createClient, onSuccess: () => qc.invalidateQueries({ queryKey: ["clients"] }) });
+}
+export function useUpdateClient() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: Parameters<typeof api.updateClient>[1] }) =>
+      api.updateClient(id, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["clients"] }),
+  });
+}
+export function useDeleteClient() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: api.deleteClient, onSuccess: () => qc.invalidateQueries({ queryKey: ["clients"] }) });
 }
