@@ -141,7 +141,8 @@ export default function Login() {
               key={role}
               type="button"
               onClick={() => handleDemo(role)}
-              className={`w-full rounded-lg py-2.5 px-4 text-sm font-medium transition-opacity hover:opacity-90 ${color}`}
+              aria-label={label}
+              className={`w-full rounded-lg min-h-[44px] py-2.5 px-4 text-sm font-medium transition-all duration-150 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand-500 ${color}`}
             >
               {label}
             </button>

@@ -64,19 +64,20 @@ export function Step4FechaDireccion() {
 
       {/* Time slots */}
       <div className="space-y-2">
-        <Label className="flex items-center gap-1.5">
-          <Clock className="h-4 w-4 text-muted" />
+        <Label id="time-label" className="flex items-center gap-1.5">
+          <Clock className="h-4 w-4 text-muted" aria-hidden="true" />
           Horario
         </Label>
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-5 gap-2" role="group" aria-labelledby="time-label">
           {TIME_SLOTS.map((slot) => (
             <button
               key={slot}
               type="button"
               onClick={() => set({ time: slot })}
               aria-pressed={data.time === slot}
+              aria-label={`Horario ${slot}`}
               className={cn(
-                "rounded-lg border-2 py-2 text-center text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600",
+                "rounded-lg border-2 py-2 min-h-[40px] text-center text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600",
                 data.time === slot
                   ? "border-brand-600 bg-brand-50 text-brand-700 font-semibold"
                   : "border-line bg-surface text-ink-2 hover:border-brand-300",

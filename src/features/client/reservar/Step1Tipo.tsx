@@ -27,21 +27,21 @@ export function Step1Tipo() {
         <p className="text-sm text-muted">Selecciona el tipo de limpieza</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3" role="group" aria-label="Tipo de servicio">
         {SERVICE_OPTIONS.map(({ type, label, desc, Icon }) => (
           <button
             key={type}
             type="button"
             onClick={() => set({ serviceType: type })}
             className={cn(
-              "flex flex-col items-start gap-2 rounded-xl border-2 p-4 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600",
+              "flex flex-col items-start gap-2 rounded-xl border-2 p-4 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 min-h-[88px]",
               data.serviceType === type
                 ? "border-brand-600 bg-brand-50"
                 : "border-line bg-surface hover:border-brand-300",
             )}
             aria-pressed={data.serviceType === type}
           >
-            <Icon className={cn("h-6 w-6", data.serviceType === type ? "text-brand-600" : "text-muted")} />
+            <Icon className={cn("h-6 w-6", data.serviceType === type ? "text-brand-600" : "text-muted")} aria-hidden="true" />
             <div>
               <p className={cn("font-medium text-sm", data.serviceType === type ? "text-brand-700" : "text-ink")}>
                 {label}
@@ -55,14 +55,14 @@ export function Step1Tipo() {
       <div>
         <h2 className="font-semibold text-ink mb-1">Tamaño del espacio</h2>
         <p className="text-sm text-muted mb-3">¿Cuánto mide el lugar?</p>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3" role="group" aria-label="Tamaño del espacio">
           {SIZE_OPTIONS.map(({ value, label, desc }) => (
             <button
               key={value}
               type="button"
               onClick={() => set({ size: value })}
               className={cn(
-                "rounded-xl border-2 p-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600",
+                "rounded-xl border-2 p-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 min-h-[64px]",
                 data.size === value
                   ? "border-brand-600 bg-brand-50"
                   : "border-line bg-surface hover:border-brand-300",

@@ -161,7 +161,8 @@ function SuccessState({ radicado, onNew }: { radicado: string; onNew: () => void
       <button
         type="button"
         onClick={onNew}
-        className="text-sm text-brand-600 underline underline-offset-2 hover:text-brand-700"
+        aria-label="Radicar nueva solicitud"
+        className="text-sm text-brand-600 underline underline-offset-2 hover:text-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded min-h-[40px] px-2"
       >
         Nueva solicitud
       </button>

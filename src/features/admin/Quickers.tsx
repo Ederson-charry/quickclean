@@ -195,9 +195,9 @@ export default function Quickers() {
               onClick={() => setStatusFilter(s)}
               aria-pressed={statusFilter === s}
               className={cn(
-                "rounded-full px-3 py-1 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600",
+                "rounded-full px-3 py-1.5 min-h-[36px] text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600",
                 statusFilter === s
-                  ? "bg-brand-600 text-white"
+                  ? "bg-brand-600 text-white shadow-sm"
                   : "bg-surface border border-line text-ink-2 hover:border-brand-300 hover:text-ink",
               )}
             >

@@ -30,7 +30,7 @@ export default function Hoy() {
         {balanceQ.isLoading ? (
           <div className="mt-1 h-10 w-40 animate-pulse rounded-lg bg-white/20" />
         ) : balanceQ.isError ? (
-          <p className="mt-1 text-sm text-white/70">No disponible · <button onClick={() => balanceQ.refetch()} className="underline hover:no-underline focus-visible:outline-none">Reintentar</button></p>
+          <p className="mt-1 text-sm text-white/70">No disponible · <button type="button" onClick={() => balanceQ.refetch()} aria-label="Reintentar cargar balance" className="underline hover:no-underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white rounded">Reintentar</button></p>
         ) : balanceQ.data ? (
           <p className="mt-1 font-display text-4xl font-bold tracking-tight">
             {cop(balanceQ.data.today)}
