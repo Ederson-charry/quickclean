@@ -2,8 +2,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate, Link } from "@tanstack/react-router";
-import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { Logo } from "@/components/layout/Logo";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,9 +58,8 @@ export default function Registro() {
       {/* Brand panel */}
       <div className="hidden md:flex flex-col justify-center items-center flex-1 bg-gradient-to-br from-brand-600 to-brand-700 px-12 py-16 text-white">
         <div className="max-w-xs text-center">
-          <div className="flex items-center justify-center gap-3 mb-8">
-            <Sparkles className="h-10 w-10" />
-            <span className="font-[var(--font-display)] text-4xl font-bold tracking-tight">QuickClean</span>
+          <div className="flex items-center justify-center mb-8">
+            <Logo height={72} className="text-white" />
           </div>
           <p className="text-xl font-medium leading-relaxed text-white/90">
             Crea tu cuenta y agenda tu primer servicio hoy
@@ -74,9 +73,8 @@ export default function Registro() {
       {/* Form panel */}
       <div className="flex flex-1 flex-col justify-center px-6 py-12 sm:px-12 max-w-md mx-auto w-full md:max-w-none md:w-[480px] md:mx-0">
         {/* Mobile brand */}
-        <div className="flex items-center gap-2 mb-8 md:hidden">
-          <Sparkles className="h-6 w-6 text-brand-600" />
-          <span className="font-[var(--font-display)] text-2xl font-bold text-brand-600">QuickClean</span>
+        <div className="flex items-center mb-8 md:hidden">
+          <Logo height={36} className="text-brand-600" />
         </div>
 
         <h1 className="text-2xl font-bold text-ink mb-2">Crear cuenta</h1>

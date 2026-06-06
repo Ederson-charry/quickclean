@@ -47,7 +47,7 @@ export function AdminShell() {
         {/* Sidebar — desktop */}
         <aside className="hidden lg:flex flex-col bg-navy min-h-screen sticky top-0">
           <div className="flex items-center gap-2 px-5 py-4 border-b border-white/10">
-            <Brand />
+            <Brand tone="white" />
           </div>
           <SidebarNav />
         </aside>
@@ -68,7 +68,7 @@ export function AdminShell() {
                 <SheetContent side="left" className="w-[248px] bg-navy p-0 border-0">
                   <SheetTitle className="sr-only">Menú de navegación</SheetTitle>
                   <div className="flex items-center gap-2 px-5 py-4 border-b border-white/10">
-                    <Brand />
+                    <Brand tone="white" />
                   </div>
                   <SidebarNav onNavigate={() => setOpen(false)} />
                 </SheetContent>
