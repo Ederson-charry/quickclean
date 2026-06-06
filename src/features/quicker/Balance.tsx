@@ -1,7 +1,7 @@
 import { ArrowDownToLine, TrendingUp, ArrowUpRight, ArrowDownLeft, Minus } from "lucide-react";
 import { toast } from "sonner";
 import { useQuickerBalance } from "@/hooks/queries";
-import { LoadingState, ErrorState } from "@/components/shared/States";
+import { LoadingState, ErrorState, EmptyState } from "@/components/shared/States";
 import { Button } from "@/components/ui/button";
 import { cop } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -98,9 +98,7 @@ export default function Balance() {
         <h2 className="mb-3 font-semibold text-ink">Historial de movimientos</h2>
 
         {data.history.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-line bg-surface py-10 text-center">
-            <p className="text-sm text-muted">Sin movimientos aún.</p>
-          </div>
+          <EmptyState title="Sin movimientos aún" hint="Aquí verás tus ingresos y retiros." />
         ) : (
           <div className="divide-y divide-line rounded-xl border border-line bg-surface overflow-hidden">
             {data.history.map((item, i) => {

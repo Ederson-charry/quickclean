@@ -29,6 +29,8 @@ export default function Hoy() {
         <p className="text-sm font-medium text-white/70">Balance del día</p>
         {balanceQ.isLoading ? (
           <div className="mt-1 h-10 w-40 animate-pulse rounded-lg bg-white/20" />
+        ) : balanceQ.isError ? (
+          <p className="mt-1 text-sm text-white/70">No disponible · <button onClick={() => balanceQ.refetch()} className="underline hover:no-underline focus-visible:outline-none">Reintentar</button></p>
         ) : balanceQ.data ? (
           <p className="mt-1 font-display text-4xl font-bold tracking-tight">
             {cop(balanceQ.data.today)}

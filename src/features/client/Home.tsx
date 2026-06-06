@@ -8,15 +8,15 @@ import { useServices, useMyBookings } from "@/hooks/queries";
 import { useSession } from "@/stores/session";
 import { ServiceCard } from "@/components/shared/ServiceCard";
 import { BookingCard } from "@/components/shared/BookingCard";
-import { LoadingState } from "@/components/shared/States";
+import { LoadingState, EmptyState, ErrorState } from "@/components/shared/States";
 import { fechaCorta } from "@/lib/format";
 import type { Service } from "@/mocks/types";
 
 export default function Home() {
   const { user } = useSession();
   const navigate = useNavigate();
-  const { data: services, isLoading: servicesLoading } = useServices();
-  const { data: bookings, isLoading: bookingsLoading } = useMyBookings();
+  const { data: services, isLoading: servicesLoading, isError: servicesError, refetch: servicesRefetch } = useServices();
+  const { data: bookings, isLoading: bookingsLoading, isError: bookingsError, refetch: bookingsRefetch } = useMyBookings();
 
   const firstName = user?.name?.split(" ")[0] ?? "Cliente";
   const initials = user?.name?.split(" ").map((n) => n[0]).join("").slice(0, 2) ?? "CL";
@@ -51,8 +51,11 @@ export default function Home() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
+        <label htmlFor="home-search" className="sr-only">Buscar servicio</label>
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted pointer-events-none" aria-hidden="true" />
         <Input
+          id="home-search"
+          type="search"
           placeholder="Buscar servicio..."
           className="pl-9 bg-surface border-line"
           aria-label="Buscar servicio"
@@ -85,12 +88,16 @@ export default function Home() {
         <h2 className="font-semibold text-ink mb-4">Nuestros servicios</h2>
         {servicesLoading ? (
           <LoadingState rows={4} />
+        ) : servicesError ? (
+          <ErrorState onRetry={servicesRefetch} />
+        ) : !services || services.length === 0 ? (
+          <EmptyState title="No hay servicios disponibles" hint="Vuelve pronto, estamos ampliando nuestro catálogo." />
         ) : (
           <div
             className="grid gap-4"
-            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))" }}
+            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}
           >
-            {services?.map((service) => (
+            {services.map((service) => (
               <ServiceCard
                 key={service.id}
                 service={service}
@@ -104,6 +111,8 @@ export default function Home() {
       {/* Two-column row: Próximo + Pendiente */}
       {bookingsLoading ? (
         <LoadingState rows={2} />
+      ) : bookingsError ? (
+        <ErrorState onRetry={bookingsRefetch} />
       ) : (
         <div className="grid sm:grid-cols-2 gap-4">
           {/* Próximo servicio */}
