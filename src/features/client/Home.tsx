@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Search, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -28,10 +28,8 @@ export default function Home() {
     (b) => b.status === "completado" && !b.rated,
   );
 
-  function handleSelectService(service: Service) {
+  function handleSelectService(_service: Service) {
     navigate({ to: "/app/reservar" });
-    // pre-select service type via store if needed
-    const _ = service; // consumed to avoid lint warning
   }
 
   return (
@@ -73,12 +71,12 @@ export default function Home() {
           <p className="text-brand-100 text-sm mb-4">
             Profesionales verificados · Garantía de calidad
           </p>
-          <Button
-            asChild
-            className="bg-white text-brand-600 hover:bg-brand-50 font-semibold"
+          <Link
+            to="/app/reservar"
+            className={buttonVariants({ variant: "default", className: "bg-white text-brand-600 hover:bg-brand-50 font-semibold" })}
           >
-            <Link to="/app/reservar">Agendar ahora</Link>
-          </Button>
+            Agendar ahora
+          </Link>
         </div>
       </div>
 
@@ -116,9 +114,12 @@ export default function Home() {
             ) : (
               <div className="rounded-xl border border-dashed border-line bg-surface p-5 text-center">
                 <p className="text-sm text-muted">Sin servicios próximos</p>
-                <Button asChild size="sm" className="mt-3 bg-brand-600 hover:bg-brand-700 text-white">
-                  <Link to="/app/reservar">Agendar ahora</Link>
-                </Button>
+                <Link
+                  to="/app/reservar"
+                  className={buttonVariants({ size: "sm", className: "mt-3 bg-brand-600 hover:bg-brand-700 text-white" })}
+                >
+                  Agendar ahora
+                </Link>
               </div>
             )}
           </section>
@@ -139,12 +140,14 @@ export default function Home() {
                     {fechaCorta(pendingRating.date)} · {pendingRating.duration}h
                   </p>
                 </div>
-                <Button asChild size="sm" variant="outline" className="w-full group border-brand-200 text-brand-600 hover:bg-brand-50">
-                  <Link to="/app/servicios/$id/calificar" params={{ id: pendingRating.id }}>
-                    Calificar servicio
-                    <ChevronRight className="h-4 w-4 ml-1 group-hover:translate-x-0.5 transition-transform" />
-                  </Link>
-                </Button>
+                <Link
+                  to="/app/servicios/$id/calificar"
+                  params={{ id: pendingRating.id }}
+                  className={buttonVariants({ size: "sm", variant: "outline", className: "w-full border-brand-200 text-brand-600 hover:bg-brand-50 gap-1" })}
+                >
+                  Calificar servicio
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Link>
               </div>
             ) : (
               <div className="rounded-xl border border-dashed border-line bg-surface p-5 text-center">

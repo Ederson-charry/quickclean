@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useBooking } from "@/stores/booking";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,20 +33,17 @@ export function Step4FechaDireccion() {
       <div className="space-y-2">
         <Label>Fecha del servicio</Label>
         <Popover open={calOpen} onOpenChange={setCalOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "w-full justify-start text-left font-normal border-line",
-                !selectedDate && "text-muted",
-              )}
-              aria-label="Seleccionar fecha"
-            >
-              <CalendarIcon className="mr-2 h-4 w-4 text-muted" />
-              {selectedDate
-                ? format(selectedDate, "EEEE d 'de' MMMM yyyy", { locale: es })
-                : "Seleccionar fecha"}
-            </Button>
+          <PopoverTrigger
+            className={cn(
+              "inline-flex w-full items-center justify-start gap-2 rounded-lg border border-line bg-background px-3 py-2 text-sm text-left font-normal transition-colors hover:bg-muted",
+              !selectedDate && "text-muted",
+            )}
+            aria-label="Seleccionar fecha"
+          >
+            <CalendarIcon className="h-4 w-4 text-muted shrink-0" />
+            {selectedDate
+              ? format(selectedDate, "EEEE d 'de' MMMM yyyy", { locale: es })
+              : "Seleccionar fecha"}
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
             <Calendar
@@ -61,7 +57,6 @@ export function Step4FechaDireccion() {
               }}
               disabled={(date) => date < new Date()}
               locale={es}
-              initialFocus
             />
           </PopoverContent>
         </Popover>

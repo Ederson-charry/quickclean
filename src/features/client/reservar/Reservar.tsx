@@ -1,4 +1,4 @@
-import { useBooking } from "@/stores/booking";
+import { useBooking, type BookingDraft } from "@/stores/booking";
 import { Stepper } from "@/components/shared/Stepper";
 import { PriceSummary } from "@/components/shared/PriceSummary";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Step5Resumen } from "./Step5Resumen";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 
-function isStepValid(step: number, data: ReturnType<typeof useBooking>["data"]): boolean {
+function isStepValid(step: number, data: BookingDraft): boolean {
   switch (step) {
     case 1:
       return !!data.serviceType && !!data.size;

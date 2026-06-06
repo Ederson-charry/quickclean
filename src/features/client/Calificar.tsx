@@ -3,10 +3,9 @@ import { useParams, useNavigate } from "@tanstack/react-router";
 import { useBooking as useBookingQuery } from "@/hooks/queries";
 import { useRateBooking } from "@/hooks/queries";
 import { RatingStars } from "@/components/shared/RatingStars";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState } from "@/components/shared/States";
 import { cop } from "@/lib/format";
 import { CheckCircle, Loader2 } from "lucide-react";
@@ -31,7 +30,7 @@ const TIP_OPTIONS = [
 ];
 
 export default function Calificar() {
-  const { id } = useParams({ from: "/app/servicios/$id/calificar" });
+  const { id } = useParams({ strict: false }) as { id: string };
   const navigate = useNavigate();
   const { data: booking, isLoading, isError, refetch } = useBookingQuery(id);
   const rateBooking = useRateBooking();
@@ -77,19 +76,18 @@ export default function Calificar() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
-          <Button
-            asChild
-            className="flex-1 bg-brand-600 hover:bg-brand-700 text-white"
+          <a
+            href="/app/servicios"
+            className={buttonVariants({ className: "flex-1 bg-brand-600 hover:bg-brand-700 text-white" })}
           >
-            <a href="/app/servicios">Ver mis servicios</a>
-          </Button>
-          <Button
-            asChild
-            variant="outline"
-            className="flex-1 border-line"
+            Ver mis servicios
+          </a>
+          <a
+            href="/app"
+            className={buttonVariants({ variant: "outline", className: "flex-1 border-line" })}
           >
-            <a href="/app">Ir al inicio</a>
-          </Button>
+            Ir al inicio
+          </a>
         </div>
       </div>
     );

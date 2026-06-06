@@ -1,7 +1,6 @@
 import { useEffect } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import { useBooking } from "@/stores/booking";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { CheckCircle, Star, MapPin, Clock } from "lucide-react";
@@ -15,7 +14,6 @@ interface ConfirmacionProps {
 
 export function Confirmacion({ booking }: ConfirmacionProps) {
   const { reset } = useBooking();
-  const navigate = useNavigate();
 
   useEffect(() => {
     reset();
@@ -93,19 +91,18 @@ export function Confirmacion({ booking }: ConfirmacionProps) {
 
       {/* CTAs */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <Button
-          asChild
-          className="flex-1 bg-brand-600 hover:bg-brand-700 text-white"
+        <a
+          href="/app/servicios"
+          className={buttonVariants({ className: "flex-1 bg-brand-600 hover:bg-brand-700 text-white" })}
         >
-          <a href="/app/servicios">Ver mis servicios</a>
-        </Button>
-        <Button
-          asChild
-          variant="outline"
-          className="flex-1 border-line"
+          Ver mis servicios
+        </a>
+        <a
+          href="/app"
+          className={buttonVariants({ variant: "outline", className: "flex-1 border-line" })}
         >
-          <a href="/app">Volver al inicio</a>
-        </Button>
+          Volver al inicio
+        </a>
       </div>
     </div>
   );

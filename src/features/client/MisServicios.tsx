@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { useMyBookings } from "@/hooks/queries";
 import { BookingCard } from "@/components/shared/BookingCard";
 import { LoadingState, EmptyState, ErrorState } from "@/components/shared/States";
@@ -17,9 +17,12 @@ export default function MisServicios() {
         title="Sin servicios aún"
         hint="Agenda tu primer servicio y aparecerá aquí"
         action={
-          <Button asChild className="bg-brand-600 hover:bg-brand-700 text-white">
-            <Link to="/app/reservar">Agendar ahora</Link>
-          </Button>
+          <Link
+            to="/app/reservar"
+            className={buttonVariants({ className: "bg-brand-600 hover:bg-brand-700 text-white" })}
+          >
+            Agendar ahora
+          </Link>
         }
       />
     );
@@ -41,17 +44,14 @@ export default function MisServicios() {
               booking={booking}
               action={
                 canRate ? (
-                  <Button
-                    asChild
-                    size="sm"
-                    variant="outline"
-                    className="border-brand-200 text-brand-600 hover:bg-brand-50 gap-1.5"
+                  <Link
+                    to="/app/servicios/$id/calificar"
+                    params={{ id: booking.id }}
+                    className={buttonVariants({ size: "sm", variant: "outline", className: "border-brand-200 text-brand-600 hover:bg-brand-50 gap-1.5" })}
                   >
-                    <Link to="/app/servicios/$id/calificar" params={{ id: booking.id }}>
-                      <Star className="h-3.5 w-3.5" />
-                      Calificar
-                    </Link>
-                  </Button>
+                    <Star className="h-3.5 w-3.5" />
+                    Calificar
+                  </Link>
                 ) : undefined
               }
             />
