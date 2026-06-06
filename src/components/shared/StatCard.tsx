@@ -14,7 +14,7 @@ export function StatCard({ icon: Icon, value, label, delta, iconColor = "text-br
   const isNegative = delta !== undefined && delta < 0;
 
   return (
-    <div className="rounded-xl border border-line bg-surface p-5 shadow-sm transition-shadow hover:shadow-md">
+    <div className="rounded-xl border border-line bg-surface p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-brand-200">
       <div className="flex items-start justify-between gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50">
           <Icon className={cn("h-5 w-5", iconColor)} aria-hidden="true" />

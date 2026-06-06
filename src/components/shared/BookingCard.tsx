@@ -34,7 +34,7 @@ export function BookingCard({ booking, action, className }: BookingCardProps) {
   return (
     <div
       className={cn(
-        "rounded-xl border border-line bg-surface p-4 hover:shadow-sm transition-shadow",
+        "rounded-xl border border-line bg-surface p-4 hover:shadow-sm hover:border-brand-200 transition-all duration-200",
         className,
       )}
     >

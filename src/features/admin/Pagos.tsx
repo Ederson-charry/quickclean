@@ -95,10 +95,10 @@ export default function Pagos() {
               key={p}
               onClick={() => setPeriod(p)}
               aria-pressed={period === p}
-              className={`rounded-full px-3 py-1 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 ${
+              className={`rounded-full px-3 py-1.5 min-h-[36px] text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 ${
                 period === p
-                  ? "bg-brand-600 text-white"
-                  : "bg-surface border border-line text-ink-2 hover:border-brand-300"
+                  ? "bg-brand-600 text-white shadow-sm"
+                  : "bg-surface border border-line text-ink-2 hover:border-brand-300 hover:text-ink"
               }`}
             >
               {p}

@@ -21,8 +21,9 @@ export function RoleSwitcher() {
           aria-selected={role === r.key}
           onClick={() => { setRole(r.key); navigate({ to: r.home }); }}
           className={cn(
-            "px-3 py-1.5 text-sm rounded-full transition-colors",
-            role === r.key ? "bg-brand-600 text-white" : "text-ink-2 hover:text-ink",
+            "min-h-[36px] px-3 py-1.5 text-sm rounded-full transition-all duration-150",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60 focus-visible:ring-offset-1",
+            role === r.key ? "bg-brand-600 text-white font-medium shadow-sm" : "text-ink-2 hover:text-ink hover:bg-bg",
           )}
         >
           {r.label}

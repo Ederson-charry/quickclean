@@ -30,7 +30,7 @@ export function ServiceCard({ service, onSelect, className }: ServiceCardProps) 
   return (
     <div
       className={cn(
-        "group rounded-xl border border-line bg-surface overflow-hidden shadow-sm hover:shadow-md transition-shadow",
+        "group rounded-xl border border-line bg-surface overflow-hidden shadow-sm hover:shadow-md hover:border-brand-200 transition-all duration-200",
         className,
       )}
     >
@@ -46,8 +46,9 @@ export function ServiceCard({ service, onSelect, className }: ServiceCardProps) 
         {onSelect && (
           <Button
             size="sm"
-            className="w-full bg-brand-600 hover:bg-brand-700 text-white"
+            className="w-full bg-brand-600 hover:bg-brand-700 text-white min-h-[40px] transition-all duration-150"
             onClick={() => onSelect(service)}
+            aria-label={`Agendar ${service.name}`}
           >
             Agendar
           </Button>
