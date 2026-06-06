@@ -5,36 +5,58 @@ import {
   Outlet,
   redirect,
 } from "@tanstack/react-router";
+import { lazy, Suspense } from "react";
 import { useSession } from "@/stores/session";
 
-// Layout shells
+// Layout shells (small, load eagerly)
 import { ClientShell } from "@/components/layout/ClientShell";
 import { QuickerShell } from "@/components/layout/QuickerShell";
 import { AdminShell } from "@/components/layout/AdminShell";
 
-// Auth screens
-import Login from "@/features/auth/Login";
-import Registro from "@/features/auth/Registro";
+// Loading fallback
+import { LoadingState } from "@/components/shared/States";
 
-// Client screens
-import Home from "@/features/client/Home";
-import Reservar from "@/features/client/reservar/Reservar";
-import MisServicios from "@/features/client/MisServicios";
-import Calificar from "@/features/client/Calificar";
+function PageFallback() {
+  return (
+    <div className="px-4 py-8">
+      <LoadingState rows={4} />
+    </div>
+  );
+}
 
-// Quicker screens
-import Hoy from "@/features/quicker/Hoy";
-import DetalleServicio from "@/features/quicker/DetalleServicio";
-import Balance from "@/features/quicker/Balance";
-import Solicitudes from "@/features/quicker/Solicitudes";
-import Perfil from "@/features/quicker/Perfil";
+function withSuspense<T extends object>(Component: React.ComponentType<T>) {
+  return function SuspenseWrapper(props: T) {
+    return (
+      <Suspense fallback={<PageFallback />}>
+        <Component {...props} />
+      </Suspense>
+    );
+  };
+}
 
-// Admin screens
-import Dashboard from "@/features/admin/Dashboard";
-import Quickers from "@/features/admin/Quickers";
-import CrearQuicker from "@/features/admin/CrearQuicker";
-import Pagos from "@/features/admin/Pagos";
-import Facturacion from "@/features/admin/Facturacion";
+// Auth screens — lazy
+const Login = withSuspense(lazy(() => import("@/features/auth/Login")));
+const Registro = withSuspense(lazy(() => import("@/features/auth/Registro")));
+
+// Client screens — lazy
+const Home = withSuspense(lazy(() => import("@/features/client/Home")));
+const Reservar = withSuspense(lazy(() => import("@/features/client/reservar/Reservar")));
+const MisServicios = withSuspense(lazy(() => import("@/features/client/MisServicios")));
+const Calificar = withSuspense(lazy(() => import("@/features/client/Calificar")));
+
+// Quicker screens — lazy
+const Hoy = withSuspense(lazy(() => import("@/features/quicker/Hoy")));
+const DetalleServicio = withSuspense(lazy(() => import("@/features/quicker/DetalleServicio")));
+const Balance = withSuspense(lazy(() => import("@/features/quicker/Balance")));
+const Solicitudes = withSuspense(lazy(() => import("@/features/quicker/Solicitudes")));
+const Perfil = withSuspense(lazy(() => import("@/features/quicker/Perfil")));
+
+// Admin screens — lazy
+const Dashboard = withSuspense(lazy(() => import("@/features/admin/Dashboard")));
+const Quickers = withSuspense(lazy(() => import("@/features/admin/Quickers")));
+const CrearQuicker = withSuspense(lazy(() => import("@/features/admin/CrearQuicker")));
+const Pagos = withSuspense(lazy(() => import("@/features/admin/Pagos")));
+const Facturacion = withSuspense(lazy(() => import("@/features/admin/Facturacion")));
 
 // ─── Root route ───────────────────────────────────────────────────────────────
 const rootRoute = createRootRoute({
