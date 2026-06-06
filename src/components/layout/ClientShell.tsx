@@ -1,6 +1,14 @@
-import { Outlet, Link } from "@tanstack/react-router";
-import { Home, CalendarDays, Layers } from "lucide-react";
+import { Outlet, Link, useNavigate } from "@tanstack/react-router";
+import { Home, CalendarDays, Layers, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { RoleSwitcher } from "@/components/shared/RoleSwitcher";
 import { Brand } from "./Brand";
 import { useSession } from "@/stores/session";
@@ -13,8 +21,14 @@ const NAV = [
 ];
 
 export function ClientShell() {
-  const { user } = useSession();
+  const { user, logout } = useSession();
+  const navigate = useNavigate();
   const initials = user?.name?.split(" ").map((n) => n[0]).join("").slice(0, 2) ?? "CL";
+
+  const handleLogout = () => {
+    logout();
+    navigate({ to: "/login" });
+  };
 
   return (
     <div className="min-h-full flex flex-col">
@@ -38,11 +52,31 @@ export function ClientShell() {
           </nav>
           <div className="flex items-center gap-3">
             <RoleSwitcher />
-            <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-brand-100 text-brand-700 text-xs font-medium">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
+            <DropdownMenu>
+              <DropdownMenuTrigger className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2">
+                <Avatar className="h-8 w-8 cursor-pointer">
+                  <AvatarFallback className="bg-brand-100 text-brand-700 text-xs font-medium">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" side="bottom" sideOffset={8}>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-semibold text-sm text-ink">{user?.name ?? "Cliente"}</span>
+                    <span className="text-xs text-muted">Cliente</span>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="text-danger focus:text-danger focus:bg-danger/10 cursor-pointer"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Cerrar sesión
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
