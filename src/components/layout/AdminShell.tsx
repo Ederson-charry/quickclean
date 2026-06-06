@@ -90,7 +90,7 @@ export function AdminShell() {
           </header>
 
           {/* Page content */}
-          <main className={cn("flex-1 px-4 py-6 sm:px-6")}>
+          <main className={cn("flex-1 px-4 py-6 sm:px-6 max-w-full overflow-x-hidden")}>
             <Outlet />
           </main>
         </div>

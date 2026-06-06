@@ -53,7 +53,7 @@ export function ClientShell() {
       </main>
 
       {/* Mobile bottom bar */}
-      <nav className="md:hidden sticky bottom-0 z-40 border-t border-line bg-surface" aria-label="Navegación móvil">
+      <nav className="md:hidden sticky bottom-0 z-40 border-t border-line bg-surface safe-area-inset-bottom" aria-label="Navegación móvil">
         <div className="flex">
           {NAV.map((item) => (
             <Link
@@ -61,11 +61,12 @@ export function ClientShell() {
               to={item.to}
               activeOptions={item.exact ? { exact: true } : undefined}
               className={cn(
-                "flex flex-1 flex-col items-center gap-1 py-3 text-xs text-muted transition-colors",
+                "flex flex-1 flex-col items-center gap-1 py-3 min-h-[56px] text-xs text-muted transition-colors",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500/50",
               )}
-              activeProps={{ className: "flex flex-1 flex-col items-center gap-1 py-3 text-xs text-brand-600 font-medium" }}
+              activeProps={{ className: "flex flex-1 flex-col items-center gap-1 py-3 min-h-[56px] text-xs text-brand-600 font-medium" }}
             >
-              <item.icon className="h-5 w-5" />
+              <item.icon className="h-5 w-5" aria-hidden="true" />
               {item.label}
             </Link>
           ))}

@@ -62,11 +62,12 @@ export function QuickerShell() {
               to={item.to}
               activeOptions={item.exact ? { exact: true } : undefined}
               className={cn(
-                "flex flex-1 flex-col items-center gap-1 py-3 text-xs text-muted transition-colors",
+                "flex flex-1 flex-col items-center gap-1 py-3 min-h-[56px] text-xs text-muted transition-colors",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500/50",
               )}
-              activeProps={{ className: "flex flex-1 flex-col items-center gap-1 py-3 text-xs text-brand-600 font-medium" }}
+              activeProps={{ className: "flex flex-1 flex-col items-center gap-1 py-3 min-h-[56px] text-xs text-brand-600 font-medium" }}
             >
-              <item.icon className="h-5 w-5" />
+              <item.icon className="h-5 w-5" aria-hidden="true" />
               {item.label}
             </Link>
           ))}
