@@ -146,8 +146,8 @@ export default function Calificar() {
           </Avatar>
           <div>
             <p className="font-semibold text-ink">{quicker.name}</p>
-            <p className="text-sm text-muted">{SERVICE_LABELS[booking.serviceType]}</p>
-            <p className="text-sm text-muted">{booking.date} · {booking.duration}h</p>
+            <p className="text-sm text-ink-2">{SERVICE_LABELS[booking.serviceType]}</p>
+            <p className="text-sm text-ink-2">{booking.date} · {booking.duration}h</p>
           </div>
         </div>
       )}

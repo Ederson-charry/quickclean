@@ -46,7 +46,7 @@ const columns: ColumnDef<Quicker, unknown>[] = [
           </Avatar>
           <div className="min-w-0">
             <p className="truncate font-medium text-ink text-sm">{q.name}</p>
-            <p className="truncate text-xs text-muted">{q.doc}</p>
+            <p className="truncate text-xs text-ink-2">{q.doc}</p>
           </div>
         </div>
       );
@@ -82,7 +82,7 @@ const columns: ColumnDef<Quicker, unknown>[] = [
       return (
         <div className="flex items-center gap-2">
           <RatingStars value={Math.round(rating)} readOnly size="sm" />
-          <span className="text-xs text-muted">{rating.toFixed(1)}</span>
+          <span className="text-xs text-ink-2">{rating.toFixed(1)}</span>
         </div>
       );
     },

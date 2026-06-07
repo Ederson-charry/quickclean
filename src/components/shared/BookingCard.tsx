@@ -49,7 +49,7 @@ export function BookingCard({ booking, action, className }: BookingCardProps) {
             </Badge>
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-2">
             <span className="flex items-center gap-1">
               <CalendarDays className="h-3.5 w-3.5" />
               {fechaCorta(booking.date)} · {booking.time}
@@ -60,7 +60,7 @@ export function BookingCard({ booking, action, className }: BookingCardProps) {
             </span>
           </div>
 
-          <p className="mt-2 text-xs text-muted truncate">{booking.address}</p>
+          <p className="mt-2 text-xs text-ink-2 truncate">{booking.address}</p>
         </div>
 
         <div className="flex flex-col items-end gap-2 shrink-0">

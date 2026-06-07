@@ -42,7 +42,7 @@ export function ServiceCard({ service, onSelect, className }: ServiceCardProps) 
       {/* Content */}
       <div className="p-4">
         <h3 className="font-semibold text-ink mb-1">{service.name}</h3>
-        <p className="text-sm text-muted line-clamp-2 mb-3">{service.desc}</p>
+        <p className="text-sm text-ink-2 line-clamp-2 mb-3">{service.desc}</p>
         {onSelect && (
           <Button
             size="sm"

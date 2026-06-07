@@ -23,7 +23,7 @@ const STATUS_VARIANT: Record<
 const STATUS_CLASS: Record<ServiceAssignment["status"], string> = {
   proximo: "border-brand-300 text-brand-600",
   en_curso: "bg-success text-white",
-  completado: "bg-muted/30 text-muted",
+  completado: "bg-line text-ink-2",
 };
 
 interface AssignmentCardProps {
@@ -60,7 +60,7 @@ export function AssignmentCard({ assignment }: AssignmentCardProps) {
             {STATUS_LABEL[assignment.status]}
           </Badge>
         </div>
-        <div className="mt-1 flex items-center gap-1 text-sm text-muted">
+        <div className="mt-1 flex items-center gap-1 text-sm text-ink-2">
           <MapPin className="h-3.5 w-3.5 shrink-0" />
           <span className="truncate">{assignment.address}</span>
         </div>

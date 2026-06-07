@@ -71,12 +71,12 @@ export default function Facturacion() {
             <table className="w-full min-w-[640px] text-sm" role="table">
               <thead>
                 <tr className="border-b border-line">
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Documento</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Periodo</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Quicker</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Valor</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Estado</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Acción</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-2">Documento</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-2">Periodo</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-2">Quicker</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-2">Valor</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-2">Estado</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-2">Acción</th>
                 </tr>
               </thead>
               <tbody>
@@ -108,7 +108,7 @@ export default function Facturacion() {
                           {payout.status === "pagado" ? (
                             <Badge className="bg-success/10 text-success border-0">Pagado</Badge>
                           ) : (
-                            <Badge variant="secondary" className="text-warning border-0">Pendiente</Badge>
+                            <Badge className="bg-warning/15 text-warning border-0">Pendiente</Badge>
                           )}
                         </td>
                         <td className="px-4 py-3 align-middle">
@@ -154,12 +154,12 @@ export default function Facturacion() {
             <table className="w-full min-w-[560px] text-sm" role="table">
               <thead>
                 <tr className="border-b border-line">
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Número</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Cliente</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Periodo</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Valor</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Estado</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Acción</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-2">Número</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-2">Cliente</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-2">Periodo</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-2">Valor</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-2">Estado</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-2">Acción</th>
                 </tr>
               </thead>
               <tbody>
@@ -188,7 +188,7 @@ export default function Facturacion() {
                         {invoice.status === "pagada" ? (
                           <Badge className="bg-success/10 text-success border-0">Pagada</Badge>
                         ) : (
-                          <Badge variant="secondary" className="text-warning border-0">Pendiente</Badge>
+                          <Badge className="bg-warning/15 text-warning border-0">Pendiente</Badge>
                         )}
                       </td>
                       <td className="px-4 py-3 align-middle">

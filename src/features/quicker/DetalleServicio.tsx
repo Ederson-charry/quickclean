@@ -22,7 +22,7 @@ const STATUS_LABEL: Record<string, string> = {
 const STATUS_CLASS: Record<string, string> = {
   proximo: "border-brand-300 text-brand-600",
   en_curso: "bg-success text-white",
-  completado: "bg-muted/30 text-muted",
+  completado: "bg-line text-ink-2",
 };
 
 export default function DetalleServicio() {
@@ -82,7 +82,7 @@ export default function DetalleServicio() {
 
       {/* Client info */}
       <div className="rounded-xl border border-line bg-surface p-4">
-        <h2 className="mb-3 text-sm font-semibold text-muted uppercase tracking-wide">
+        <h2 className="mb-3 text-sm font-semibold text-ink-2 uppercase tracking-wide">
           Cliente
         </h2>
         <div className="flex items-center gap-4">
@@ -93,7 +93,7 @@ export default function DetalleServicio() {
           </Avatar>
           <div className="min-w-0 flex-1">
             <p className="font-semibold text-ink">{assignment.clientName}</p>
-            <div className="mt-0.5 flex items-center gap-1 text-sm text-muted">
+            <div className="mt-0.5 flex items-center gap-1 text-sm text-ink-2">
               <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
               <span>4.8 · Cliente frecuente</span>
             </div>
@@ -115,7 +115,7 @@ export default function DetalleServicio() {
 
       {/* Service breakdown + payout */}
       <div className="rounded-xl border border-line bg-surface p-4">
-        <h2 className="mb-3 text-sm font-semibold text-muted uppercase tracking-wide">
+        <h2 className="mb-3 text-sm font-semibold text-ink-2 uppercase tracking-wide">
           Resumen del servicio
         </h2>
         <div className="space-y-2 text-sm">
@@ -146,7 +146,7 @@ export default function DetalleServicio() {
         <Camera className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
         <div className="text-sm">
           <p className="font-semibold text-ink">Recordatorio</p>
-          <p className="mt-0.5 text-muted">
+          <p className="mt-0.5 text-ink-2">
             Toma una foto antes de comenzar el servicio y otra al finalizar para
             registrar el estado del espacio.
           </p>

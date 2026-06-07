@@ -114,7 +114,7 @@ export default function Hoy() {
         <div className="rounded-xl border border-line bg-surface p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted">Disponible para retirar</p>
+              <p className="text-sm text-ink-2">Disponible para retirar</p>
               <p className="mt-0.5 text-xl font-bold text-ink">
                 {cop(balanceQ.data.available)}
               </p>

@@ -60,28 +60,28 @@ export function Step5Resumen() {
           {SERVICE_LABELS[data.serviceType ?? "hogar"]}
         </h3>
 
-        <div className="space-y-2 text-sm text-muted">
+        <div className="space-y-2 text-sm text-ink-2">
           {data.date && (
             <div className="flex items-center gap-2">
-              <CalendarDays className="h-4 w-4 shrink-0" />
+              <CalendarDays className="h-4 w-4 shrink-0 text-muted" />
               <span className="capitalize">{fechaCorta(data.date)}</span>
             </div>
           )}
           {data.time && (
             <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 shrink-0" />
+              <Clock className="h-4 w-4 shrink-0 text-muted" />
               <span>{data.time} · {data.duration}h · {FREQ_LABELS[data.frequency]}</span>
             </div>
           )}
           {data.address && (
             <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 shrink-0" />
+              <MapPin className="h-4 w-4 shrink-0 text-muted" />
               <span className="truncate">{data.address}</span>
             </div>
           )}
           {data.supplies && (
             <div className="flex items-center gap-2">
-              <Tag className="h-4 w-4 shrink-0" />
+              <Tag className="h-4 w-4 shrink-0 text-muted" />
               <span>Implementos incluidos</span>
             </div>
           )}

@@ -51,7 +51,7 @@ export function DataTable<T>({ columns, data, pageSize = 10 }: DataTableProps<T>
                       key={header.id}
                       scope="col"
                       className={cn(
-                        "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted",
+                        "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-2",
                         canSort && "cursor-pointer select-none",
                       )}
                       onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
@@ -70,7 +70,7 @@ export function DataTable<T>({ columns, data, pageSize = 10 }: DataTableProps<T>
                           ? null
                           : flexRender(header.column.columnDef.header, header.getContext())}
                         {canSort && (
-                          <span className="text-muted/60" aria-hidden="true">
+                          <span className="text-muted" aria-hidden="true">
                             {sorted === "asc" ? (
                               <ChevronUp className="h-3.5 w-3.5" />
                             ) : sorted === "desc" ? (

@@ -51,13 +51,13 @@ export function Confirmacion({ booking }: ConfirmacionProps) {
           <Badge className="bg-brand-100 text-brand-700 border-brand-200">Agendado</Badge>
         </div>
 
-        <div className="space-y-2 text-sm text-muted">
+        <div className="space-y-2 text-sm text-ink-2">
           <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 shrink-0" />
+            <Clock className="h-4 w-4 shrink-0 text-muted" />
             <span className="capitalize">{fechaLarga(booking.date)} · {booking.time}</span>
           </div>
           <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 shrink-0" />
+            <MapPin className="h-4 w-4 shrink-0 text-muted" />
             <span className="truncate">{booking.address}</span>
           </div>
         </div>
@@ -79,7 +79,7 @@ export function Confirmacion({ booking }: ConfirmacionProps) {
           </Avatar>
           <div className="text-left">
             <p className="font-semibold text-ink">{quicker.name}</p>
-            <div className="flex items-center gap-1 text-sm text-muted">
+            <div className="flex items-center gap-1 text-sm text-ink-2">
               <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
               <span>{quicker.rating.toFixed(1)}</span>
               <span>·</span>

@@ -137,14 +137,14 @@ export default function Pagos() {
           <table className="w-full min-w-[700px] text-sm" role="table">
             <thead>
               <tr className="border-b border-line">
-                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Quicker</th>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Servicios</th>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Horas</th>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Bruto</th>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Deducciones</th>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Neto</th>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Estado</th>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">Acción</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-2">Quicker</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-2">Servicios</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-2">Horas</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-2">Bruto</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-2">Deducciones</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-2">Neto</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-2">Estado</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-2">Acción</th>
               </tr>
             </thead>
             <tbody>
@@ -181,7 +181,7 @@ export default function Pagos() {
                         {payout.status === "pagado" ? (
                           <Badge className="bg-success/10 text-success border-0">Pagado</Badge>
                         ) : (
-                          <Badge variant="secondary" className="text-warning border-0">Pendiente</Badge>
+                          <Badge className="bg-warning/15 text-warning border-0">Pendiente</Badge>
                         )}
                       </td>
                       <td className="px-4 py-3 align-middle">

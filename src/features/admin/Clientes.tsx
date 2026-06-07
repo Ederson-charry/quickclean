@@ -124,7 +124,7 @@ export default function Clientes() {
         return (
           <div className="min-w-[160px]">
             <p className="font-medium text-ink text-sm truncate">{c.name}</p>
-            <p className="text-xs text-muted truncate">{c.doc}</p>
+            <p className="text-xs text-ink-2 truncate">{c.doc}</p>
           </div>
         );
       },
@@ -160,7 +160,7 @@ export default function Clientes() {
         return (
           <div className="min-w-[160px]">
             <p className="text-sm text-ink truncate">{c.email}</p>
-            <p className="text-xs text-muted">{c.phone}</p>
+            <p className="text-xs text-ink-2">{c.phone}</p>
           </div>
         );
       },

@@ -25,7 +25,7 @@ export function Stepper({ current, total = 5 }: StepperProps) {
                     "flex h-8 w-8 items-center justify-center rounded-full border-2 text-sm font-semibold transition-all",
                     done && "border-brand-600 bg-brand-600 text-white",
                     active && "border-brand-600 bg-white text-brand-600",
-                    !done && !active && "border-line bg-bg text-muted",
+                    !done && !active && "border-line bg-bg text-ink-2",
                   )}
                   aria-current={active ? "step" : undefined}
                   aria-label={`Paso ${step}: ${STEP_LABELS[i]}${done ? " (completado)" : active ? " (actual)" : ""}`}
@@ -35,7 +35,7 @@ export function Stepper({ current, total = 5 }: StepperProps) {
                 <span
                   className={cn(
                     "hidden sm:block text-xs transition-colors",
-                    active ? "text-brand-600 font-medium" : done ? "text-ink-2" : "text-muted",
+                    active ? "text-brand-600 font-medium" : "text-ink-2",
                   )}
                 >
                   {STEP_LABELS[i]}

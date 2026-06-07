@@ -71,7 +71,7 @@ export default function Perfil() {
             <Badge variant="secondary" className="bg-success/10 text-success text-xs">
               Activo
             </Badge>
-            <span className="text-sm text-muted">Quicker QuickClean</span>
+            <span className="text-sm text-ink-2">Quicker QuickClean</span>
           </div>
         </div>
       </div>
@@ -80,7 +80,7 @@ export default function Perfil() {
       <div className="rounded-xl border border-line bg-surface p-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold text-muted uppercase tracking-wide">Calificación</p>
+            <p className="text-sm font-semibold text-ink-2 uppercase tracking-wide">Calificación</p>
             <div className="mt-2 flex items-center gap-3">
               <span className="font-display text-3xl font-bold text-ink">{QUICKER_DATA.rating}</span>
               <div className="flex flex-col gap-1">
@@ -101,7 +101,7 @@ export default function Perfil() {
             { label: "Amabilidad", stars: 5 },
           ].map((item) => (
             <div key={item.label} className="rounded-lg bg-bg p-3">
-              <p className="text-xs text-muted">{item.label}</p>
+              <p className="text-xs text-ink-2">{item.label}</p>
               <div className="mt-1 flex justify-center">
                 <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
               </div>
@@ -119,7 +119,7 @@ export default function Perfil() {
           {INFO_ROWS.map(({ icon: Icon, label, value }) => (
             <div key={label} className="flex items-center gap-3 px-4 py-3">
               <Icon className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
-              <span className="text-sm text-muted w-28 shrink-0">{label}</span>
+              <span className="text-sm text-ink-2 w-28 shrink-0">{label}</span>
               <span className="text-sm font-medium text-ink truncate">{value}</span>
             </div>
           ))}

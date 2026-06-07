@@ -36,7 +36,7 @@ export function StatCard({ icon: Icon, value, label, delta, iconColor = "text-br
         <p className="text-2xl font-bold font-[var(--font-display)] text-ink leading-tight">
           {value}
         </p>
-        <p className="mt-0.5 text-sm text-muted">{label}</p>
+        <p className="mt-0.5 text-sm text-ink-2">{label}</p>
       </div>
     </div>
   );

@@ -43,7 +43,7 @@ export function PriceSummary({ duration, frequency, supplies, className }: Price
           <Row label="Implementos de aseo" value={cop(SUPPLIES_FEE)} />
         )}
 
-        <Row label="Tarifa plataforma" value={cop(PLATFORM_FEE)} valueClass="text-muted" />
+        <Row label="Tarifa plataforma" value={cop(PLATFORM_FEE)} valueClass="text-ink-2" />
       </div>
 
       <Separator className="my-3" />
@@ -54,7 +54,7 @@ export function PriceSummary({ duration, frequency, supplies, className }: Price
       </div>
 
       {frequency !== "unico" && (
-        <p className="mt-2 text-xs text-muted text-right">
+        <p className="mt-2 text-xs text-ink-2 text-right">
           Por servicio · recurrencia automática
         </p>
       )}

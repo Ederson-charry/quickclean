@@ -145,7 +145,7 @@ export default function Home() {
                      pendingRating.serviceType === "plomeria" ? "Plomería Express" :
                      "Electricista"}
                   </p>
-                  <p className="text-xs text-muted mt-0.5">
+                  <p className="text-xs text-ink-2 mt-0.5">
                     {fechaCorta(pendingRating.date)} · {pendingRating.duration}h
                   </p>
                 </div>

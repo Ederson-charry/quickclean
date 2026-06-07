@@ -179,11 +179,11 @@ export default function Dashboard() {
                   </Avatar>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-ink">{q.name}</p>
-                    <p className="text-xs text-muted">{q.zone} · {q.monthlyServices} svc/mes</p>
+                    <p className="text-xs text-ink-2">{q.zone} · {q.monthlyServices} svc/mes</p>
                   </div>
                   <div className="shrink-0">
                     <RatingStars value={Math.round(q.rating)} readOnly size="sm" />
-                    <p className="text-right text-xs text-muted mt-0.5">{q.rating.toFixed(1)}</p>
+                    <p className="text-right text-xs text-ink-2 mt-0.5">{q.rating.toFixed(1)}</p>
                   </div>
                 </li>
               ))}
@@ -201,7 +201,7 @@ export default function Dashboard() {
                 <div key={item.zone} role="listitem">
                   <div className="mb-1.5 flex items-center justify-between text-sm">
                     <span className="font-medium text-ink">{item.zone}</span>
-                    <span className="text-muted">{item.value.toLocaleString("es-CO")} svc</span>
+                    <span className="text-ink-2">{item.value.toLocaleString("es-CO")} svc</span>
                   </div>
                   <div
                     className="h-2 w-full overflow-hidden rounded-full bg-brand-50"

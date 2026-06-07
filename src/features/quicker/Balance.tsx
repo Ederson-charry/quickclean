@@ -76,20 +76,20 @@ export default function Balance() {
       {/* Today / Week cards */}
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-xl border border-line bg-surface p-4">
-          <div className="flex items-center gap-2 text-sm text-muted">
+          <div className="flex items-center gap-2 text-sm text-ink-2">
             <TrendingUp className="h-4 w-4 text-brand-600" />
             Hoy
           </div>
           <p className="mt-2 text-xl font-bold text-ink">{cop(data.today)}</p>
-          <p className="mt-0.5 text-xs text-success font-medium">Ganado hoy</p>
+          <p className="mt-0.5 text-xs text-ink-2 font-medium">Ganado hoy</p>
         </div>
         <div className="rounded-xl border border-line bg-surface p-4">
-          <div className="flex items-center gap-2 text-sm text-muted">
+          <div className="flex items-center gap-2 text-sm text-ink-2">
             <TrendingUp className="h-4 w-4 text-success" />
             Semana
           </div>
           <p className="mt-2 text-xl font-bold text-ink">{cop(data.week)}</p>
-          <p className="mt-0.5 text-xs text-success font-medium">Esta semana</p>
+          <p className="mt-0.5 text-xs text-ink-2 font-medium">Esta semana</p>
         </div>
       </div>
 
@@ -108,7 +108,7 @@ export default function Balance() {
                   <KindIcon kind={item.kind} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-ink">{item.label}</p>
-                    <p className="mt-0.5 text-xs capitalize text-muted">{item.kind}</p>
+                    <p className="mt-0.5 text-xs capitalize text-ink-2">{item.kind}</p>
                   </div>
                   <p
                     className={cn(
