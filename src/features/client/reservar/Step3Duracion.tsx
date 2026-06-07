@@ -20,7 +20,7 @@ export function Step3Duracion() {
     <div className="space-y-6">
       <div>
         <h2 className="font-semibold text-ink mb-1">Duración del servicio</h2>
-        <p className="text-sm text-muted">Elige cuántas horas necesitas</p>
+        <p className="text-sm text-faint">Elige cuántas horas necesitas</p>
       </div>
 
       <div className="space-y-3">
@@ -49,7 +49,7 @@ export function Step3Duracion() {
                     </Badge>
                   )}
                 </div>
-                <p className="text-sm text-muted">{desc}</p>
+                <p className="text-sm text-faint">{desc}</p>
               </div>
             </div>
             <span className={cn("font-semibold", data.duration === value ? "text-brand-700" : "text-ink-2")}>
@@ -65,7 +65,7 @@ export function Step3Duracion() {
           <Label htmlFor="supplies-toggle" className="font-medium text-ink cursor-pointer">
             Implementos de aseo
           </Label>
-          <p className="text-sm text-muted mt-0.5">
+          <p className="text-sm text-faint mt-0.5">
             Incluye productos y materiales · +{cop(15000)}
           </p>
         </div>

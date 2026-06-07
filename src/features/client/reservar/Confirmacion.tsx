@@ -40,7 +40,7 @@ export function Confirmacion({ booking }: ConfirmacionProps) {
           <h1 className="font-[var(--font-display)] text-2xl font-bold text-ink">
             ¡Reserva confirmada!
           </h1>
-          <p className="text-muted mt-1">Tu servicio ha sido agendado con éxito</p>
+          <p className="text-faint mt-1">Tu servicio ha sido agendado con éxito</p>
         </div>
       </div>
 
@@ -53,24 +53,24 @@ export function Confirmacion({ booking }: ConfirmacionProps) {
 
         <div className="space-y-2 text-sm text-ink-2">
           <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 shrink-0 text-muted" />
+            <Clock className="h-4 w-4 shrink-0 text-faint" />
             <span className="capitalize">{fechaLarga(booking.date)} · {booking.time}</span>
           </div>
           <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 shrink-0 text-muted" />
+            <MapPin className="h-4 w-4 shrink-0 text-faint" />
             <span className="truncate">{booking.address}</span>
           </div>
         </div>
 
         <div className="flex justify-between items-center pt-1 border-t border-line">
-          <span className="text-sm text-muted">Total pagado</span>
+          <span className="text-sm text-faint">Total pagado</span>
           <span className="font-bold text-brand-600">{cop(booking.total)}</span>
         </div>
       </div>
 
       {/* Assigned quicker */}
       <div className="rounded-xl border border-line bg-surface p-5">
-        <p className="text-sm text-muted mb-3">Tu Quicker asignada</p>
+        <p className="text-sm text-faint mb-3">Tu Quicker asignada</p>
         <div className="flex items-center gap-3">
           <Avatar className="h-12 w-12">
             <AvatarFallback className="bg-brand-100 text-brand-700 font-semibold">

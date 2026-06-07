@@ -145,7 +145,7 @@ export default function Login() {
 
               <Button
                 type="submit"
-                className="w-full bg-white text-brand-700 font-semibold hover:bg-white/90 mt-1"
+                className="w-full bg-white !text-brand-700 font-semibold hover:bg-white/90 mt-1"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? "Ingresando..." : "Ingresar"}

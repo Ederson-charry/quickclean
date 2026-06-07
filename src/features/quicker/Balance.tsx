@@ -28,7 +28,7 @@ const KIND_BG: Record<MovementKind, string> = {
 
 function KindIcon({ kind }: { kind: string }) {
   const Icon = KIND_ICON[kind as MovementKind] ?? Minus;
-  const cls = KIND_CLASS[kind as MovementKind] ?? "text-muted";
+  const cls = KIND_CLASS[kind as MovementKind] ?? "text-faint";
   const bg = KIND_BG[kind as MovementKind] ?? "bg-muted/10";
   return (
     <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full", bg)}>
@@ -55,7 +55,7 @@ export default function Balance() {
       {/* Header */}
       <div>
         <h1 className="font-display text-2xl font-bold text-ink">Mi balance</h1>
-        <p className="mt-0.5 text-sm text-muted">Ganancias y movimientos</p>
+        <p className="mt-0.5 text-sm text-faint">Ganancias y movimientos</p>
       </div>
 
       {/* Available + Retirar */}
@@ -64,7 +64,7 @@ export default function Balance() {
         <p className="text-sm font-medium text-white/70">Disponible para retirar</p>
         <p className="mt-1 font-display text-4xl font-bold text-white">{cop(data.available)}</p>
         <Button
-          className="mt-5 gap-2 bg-white text-brand-700 hover:bg-brand-50 font-semibold"
+          className="mt-5 gap-2 bg-white !text-brand-700 hover:bg-brand-50 font-semibold"
           onClick={handleWithdraw}
           aria-label="Solicitar retiro de fondos"
         >

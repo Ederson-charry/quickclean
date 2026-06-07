@@ -72,12 +72,12 @@ function DateRangePicker({
               className={cn(
                 "inline-flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-sm text-left transition-colors hover:bg-muted",
                 fromError ? "border-danger" : "border-line",
-                !fromDate && "text-muted",
+                !fromDate && "text-faint",
               )}
               aria-label="Fecha de inicio"
               aria-invalid={!!fromError}
             >
-              <CalendarIcon className="h-4 w-4 shrink-0 text-muted" />
+              <CalendarIcon className="h-4 w-4 shrink-0 text-faint" />
               <span className="truncate">
                 {fromDate ? format(fromDate, "d MMM yyyy", { locale: es }) : "Inicio"}
               </span>
@@ -105,12 +105,12 @@ function DateRangePicker({
               className={cn(
                 "inline-flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-sm text-left transition-colors hover:bg-muted",
                 toError ? "border-danger" : "border-line",
-                !toDate && "text-muted",
+                !toDate && "text-faint",
               )}
               aria-label="Fecha de fin"
               aria-invalid={!!toError}
             >
-              <CalendarIcon className="h-4 w-4 shrink-0 text-muted" />
+              <CalendarIcon className="h-4 w-4 shrink-0 text-faint" />
               <span className="truncate">
                 {toDate ? format(toDate, "d MMM yyyy", { locale: es }) : "Fin"}
               </span>
@@ -149,7 +149,7 @@ function SuccessState({ radicado, onNew }: { radicado: string; onNew: () => void
       </div>
       <div>
         <h3 className="font-semibold text-ink">Solicitud en revisión</h3>
-        <p className="mt-1 text-sm text-muted">
+        <p className="mt-1 text-sm text-faint">
           Tu solicitud fue radicada exitosamente.
         </p>
         <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-surface border border-line px-4 py-2">
@@ -362,7 +362,7 @@ function LicenciaForm() {
               <span className={cn("font-semibold text-sm", kind === opt.value ? "text-brand-700" : "text-ink")}>
                 {opt.label}
               </span>
-              <span className="text-xs text-muted">{opt.hint}</span>
+              <span className="text-xs text-faint">{opt.hint}</span>
             </button>
           ))}
         </div>
@@ -449,7 +449,7 @@ export default function Solicitudes() {
     <div className="space-y-6">
       <div>
         <h1 className="font-display text-2xl font-bold text-ink">Solicitudes</h1>
-        <p className="mt-0.5 text-sm text-muted">Incapacidades y licencias</p>
+        <p className="mt-0.5 text-sm text-faint">Incapacidades y licencias</p>
       </div>
 
       <Tabs defaultValue="incapacidad" className="w-full">

@@ -107,7 +107,7 @@ export function AdminShell() {
                     <DropdownMenuLabel className="font-normal">
                       <div className="flex flex-col gap-0.5">
                         <span className="font-semibold text-sm text-ink">{user?.name ?? "Administrador"}</span>
-                        <span className="text-xs text-muted">Admin</span>
+                        <span className="text-xs text-faint">Admin</span>
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />

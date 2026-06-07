@@ -70,7 +70,7 @@ export function DataTable<T>({ columns, data, pageSize = 10 }: DataTableProps<T>
                           ? null
                           : flexRender(header.column.columnDef.header, header.getContext())}
                         {canSort && (
-                          <span className="text-muted" aria-hidden="true">
+                          <span className="text-faint" aria-hidden="true">
                             {sorted === "asc" ? (
                               <ChevronUp className="h-3.5 w-3.5" />
                             ) : sorted === "desc" ? (
@@ -92,7 +92,7 @@ export function DataTable<T>({ columns, data, pageSize = 10 }: DataTableProps<T>
               <tr>
                 <td
                   colSpan={columns.length}
-                  className="py-12 text-center text-sm text-muted"
+                  className="py-12 text-center text-sm text-faint"
                 >
                   No hay resultados.
                 </td>
@@ -117,7 +117,7 @@ export function DataTable<T>({ columns, data, pageSize = 10 }: DataTableProps<T>
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-1">
-          <p className="text-sm text-muted">
+          <p className="text-sm text-faint">
             Página {currentPage + 1} de {totalPages}
           </p>
           <div className="flex items-center gap-1">

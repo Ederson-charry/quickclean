@@ -71,7 +71,7 @@ export default function Pagos() {
           <h1 className="text-2xl font-bold font-[var(--font-display)] text-ink">
             Pagar Quickers
           </h1>
-          <p className="mt-0.5 text-sm text-muted">Liquidación de nómina por periodo</p>
+          <p className="mt-0.5 text-sm text-faint">Liquidación de nómina por periodo</p>
         </div>
         <Button
           onClick={() => setConfirmAll(true)}
@@ -150,7 +150,7 @@ export default function Pagos() {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-sm text-muted">
+                  <td colSpan={8} className="py-12 text-center text-sm text-faint">
                     No hay liquidaciones para este periodo.
                   </td>
                 </tr>
@@ -175,7 +175,7 @@ export default function Pagos() {
                       <td className="px-4 py-3 align-middle text-ink tabular-nums">{payout.services}</td>
                       <td className="px-4 py-3 align-middle text-ink tabular-nums">{payout.hours}h</td>
                       <td className="px-4 py-3 align-middle text-ink tabular-nums">{cop(payout.gross)}</td>
-                      <td className="px-4 py-3 align-middle text-muted tabular-nums">−{cop(payout.deductions)}</td>
+                      <td className="px-4 py-3 align-middle text-faint tabular-nums">−{cop(payout.deductions)}</td>
                       <td className="px-4 py-3 align-middle font-semibold text-ink tabular-nums">{cop(payout.net)}</td>
                       <td className="px-4 py-3 align-middle">
                         {payout.status === "pagado" ? (
@@ -199,7 +199,7 @@ export default function Pagos() {
                             )}
                           </Button>
                         ) : (
-                          <span className="text-xs text-muted">—</span>
+                          <span className="text-xs text-faint">—</span>
                         )}
                       </td>
                     </tr>

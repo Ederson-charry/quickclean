@@ -128,7 +128,7 @@ export default function MantenimientoCliente() {
           to="/admin/clientes"
           className={cn(
             buttonVariants({ variant: "ghost", size: "icon-sm" }),
-            "text-muted hover:text-ink",
+            "text-faint hover:text-ink",
           )}
           aria-label="Volver a Clientes"
         >
@@ -138,7 +138,7 @@ export default function MantenimientoCliente() {
           <h1 className="text-2xl font-bold font-[var(--font-display)] text-ink">
             {isEditing ? "Editar Cliente" : "Crear Cliente"}
           </h1>
-          <p className="mt-0.5 text-sm text-muted">
+          <p className="mt-0.5 text-sm text-faint">
             {isEditing ? "Actualiza los datos del cliente" : "Registra un nuevo cliente"}
           </p>
         </div>

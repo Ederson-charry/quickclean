@@ -50,7 +50,7 @@ export default function Calificar() {
       <div className="max-w-md mx-auto text-center space-y-4 py-12">
         <CheckCircle className="h-16 w-16 text-success mx-auto" />
         <h2 className="font-semibold text-xl text-ink">Ya calificaste este servicio</h2>
-        <p className="text-muted text-sm">¡Gracias por tu retroalimentación!</p>
+        <p className="text-faint text-sm">¡Gracias por tu retroalimentación!</p>
         <Button
           onClick={() => navigate({ to: "/app/servicios" })}
           className="bg-brand-600 hover:bg-brand-700 text-white"
@@ -71,7 +71,7 @@ export default function Calificar() {
           <h1 className="font-[var(--font-display)] text-2xl font-bold text-ink mb-2">
             ¡Gracias por calificar!
           </h1>
-          <p className="text-muted">
+          <p className="text-faint">
             Tu retroalimentación ayuda a mejorar la experiencia QuickClean
           </p>
         </div>
@@ -245,7 +245,7 @@ export default function Calificar() {
 
       {/* Tip disclaimer */}
       {tip > 0 && (
-        <p className="text-center text-xs text-muted">
+        <p className="text-center text-xs text-faint">
           La propina de {cop(tip)} va directo a {quicker?.name ?? "tu Quicker"}
         </p>
       )}

@@ -24,7 +24,7 @@ export function Step1Tipo() {
     <div className="space-y-6">
       <div>
         <h2 className="font-semibold text-ink mb-1">¿Qué servicio necesitas?</h2>
-        <p className="text-sm text-muted">Selecciona el tipo de limpieza</p>
+        <p className="text-sm text-faint">Selecciona el tipo de limpieza</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3" role="group" aria-label="Tipo de servicio">
@@ -41,12 +41,12 @@ export function Step1Tipo() {
             )}
             aria-pressed={data.serviceType === type}
           >
-            <Icon className={cn("h-6 w-6", data.serviceType === type ? "text-brand-600" : "text-muted")} aria-hidden="true" />
+            <Icon className={cn("h-6 w-6", data.serviceType === type ? "text-brand-600" : "text-faint")} aria-hidden="true" />
             <div>
               <p className={cn("font-medium text-sm", data.serviceType === type ? "text-brand-700" : "text-ink")}>
                 {label}
               </p>
-              <p className="text-xs text-muted mt-0.5">{desc}</p>
+              <p className="text-xs text-faint mt-0.5">{desc}</p>
             </div>
           </button>
         ))}
@@ -54,7 +54,7 @@ export function Step1Tipo() {
 
       <div>
         <h2 className="font-semibold text-ink mb-1">Tamaño del espacio</h2>
-        <p className="text-sm text-muted mb-3">¿Cuánto mide el lugar?</p>
+        <p className="text-sm text-faint mb-3">¿Cuánto mide el lugar?</p>
         <div className="grid grid-cols-2 gap-3" role="group" aria-label="Tamaño del espacio">
           {SIZE_OPTIONS.map(({ value, label, desc }) => (
             <button
@@ -72,7 +72,7 @@ export function Step1Tipo() {
               <p className={cn("font-medium text-sm", data.size === value ? "text-brand-700" : "text-ink")}>
                 {label}
               </p>
-              <p className="text-xs text-muted">{desc}</p>
+              <p className="text-xs text-faint">{desc}</p>
             </button>
           ))}
         </div>

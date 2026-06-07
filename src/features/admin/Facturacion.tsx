@@ -33,7 +33,7 @@ export default function Facturacion() {
         <h1 className="text-2xl font-bold font-[var(--font-display)] text-ink">
           Facturación
         </h1>
-        <p className="mt-0.5 text-sm text-muted">
+        <p className="mt-0.5 text-sm text-faint">
           Cuentas de cobro y facturas a clientes
         </p>
       </div>
@@ -82,7 +82,7 @@ export default function Facturacion() {
               <tbody>
                 {!payouts || payouts.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-sm text-muted">
+                    <td colSpan={6} className="py-12 text-center text-sm text-faint">
                       No hay cuentas de cobro. Genera una quincena.
                     </td>
                   </tr>
@@ -165,7 +165,7 @@ export default function Facturacion() {
               <tbody>
                 {!invoices || invoices.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-sm text-muted">
+                    <td colSpan={6} className="py-12 text-center text-sm text-faint">
                       No hay facturas disponibles.
                     </td>
                   </tr>

@@ -55,7 +55,7 @@ export default function Perfil() {
       {/* Header */}
       <div>
         <h1 className="font-display text-2xl font-bold text-ink">Mi perfil</h1>
-        <p className="mt-0.5 text-sm text-muted">Información y documentos</p>
+        <p className="mt-0.5 text-sm text-faint">Información y documentos</p>
       </div>
 
       {/* Avatar + identity */}
@@ -85,7 +85,7 @@ export default function Perfil() {
               <span className="font-display text-3xl font-bold text-ink">{QUICKER_DATA.rating}</span>
               <div className="flex flex-col gap-1">
                 <RatingStars value={QUICKER_DATA.rating} readOnly size="sm" />
-                <p className="text-xs text-muted">{QUICKER_DATA.monthlyServices} servicios este mes</p>
+                <p className="text-xs text-faint">{QUICKER_DATA.monthlyServices} servicios este mes</p>
               </div>
             </div>
           </div>
@@ -118,7 +118,7 @@ export default function Perfil() {
         <div className="divide-y divide-line">
           {INFO_ROWS.map(({ icon: Icon, label, value }) => (
             <div key={label} className="flex items-center gap-3 px-4 py-3">
-              <Icon className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
+              <Icon className="h-4 w-4 shrink-0 text-faint" aria-hidden="true" />
               <span className="text-sm text-ink-2 w-28 shrink-0">{label}</span>
               <span className="text-sm font-medium text-ink truncate">{value}</span>
             </div>
@@ -136,7 +136,7 @@ export default function Perfil() {
           {DOCUMENTS.map((doc) => (
             <div key={doc.label} className="flex items-center justify-between px-4 py-3">
               <div className="flex items-center gap-3">
-                <FileText className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
+                <FileText className="h-4 w-4 shrink-0 text-faint" aria-hidden="true" />
                 <span className="text-sm text-ink">{doc.label}</span>
               </div>
               <Badge

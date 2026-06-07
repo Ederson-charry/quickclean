@@ -26,7 +26,7 @@ export function Step4FechaDireccion() {
     <div className="space-y-6">
       <div>
         <h2 className="font-semibold text-ink mb-1">Fecha y dirección</h2>
-        <p className="text-sm text-muted">Escoge cuándo y dónde</p>
+        <p className="text-sm text-faint">Escoge cuándo y dónde</p>
       </div>
 
       {/* Date picker */}
@@ -36,11 +36,11 @@ export function Step4FechaDireccion() {
           <PopoverTrigger
             className={cn(
               "inline-flex w-full items-center justify-start gap-2 rounded-lg border border-line bg-background px-3 py-2 text-sm text-left font-normal transition-colors hover:bg-muted",
-              !selectedDate && "text-muted",
+              !selectedDate && "text-faint",
             )}
             aria-label="Seleccionar fecha"
           >
-            <CalendarIcon className="h-4 w-4 text-muted shrink-0" />
+            <CalendarIcon className="h-4 w-4 text-faint shrink-0" />
             {selectedDate
               ? format(selectedDate, "EEEE d 'de' MMMM yyyy", { locale: es })
               : "Seleccionar fecha"}
@@ -65,7 +65,7 @@ export function Step4FechaDireccion() {
       {/* Time slots */}
       <div className="space-y-2">
         <Label id="time-label" className="flex items-center gap-1.5">
-          <Clock className="h-4 w-4 text-muted" aria-hidden="true" />
+          <Clock className="h-4 w-4 text-faint" aria-hidden="true" />
           Horario
         </Label>
         <div className="grid grid-cols-5 gap-2" role="group" aria-labelledby="time-label">
@@ -120,7 +120,7 @@ export function Step4FechaDireccion() {
           <Label htmlFor="pets-toggle" className="font-medium text-ink cursor-pointer">
             Hay mascotas en el hogar
           </Label>
-          <p className="text-sm text-muted mt-0.5">
+          <p className="text-sm text-faint mt-0.5">
             Informamos al Quicker para equipamiento adecuado
           </p>
         </div>

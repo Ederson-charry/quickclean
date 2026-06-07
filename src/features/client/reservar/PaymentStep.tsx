@@ -72,7 +72,7 @@ export function PaymentStep({ onSuccess }: PaymentStepProps) {
     <div className="space-y-6">
       <div>
         <h2 className="font-semibold text-ink mb-1">Método de pago</h2>
-        <p className="text-sm text-muted">Entorno de demo — no se realizan cobros reales</p>
+        <p className="text-sm text-faint">Entorno de demo — no se realizan cobros reales</p>
       </div>
 
       <Tabs value={method} onValueChange={(v) => setMethod(v as typeof method)}>
@@ -178,7 +178,7 @@ export function PaymentStep({ onSuccess }: PaymentStepProps) {
           <div className="rounded-xl border border-line bg-surface p-6 text-center space-y-2">
             <Building2 className="h-10 w-10 mx-auto text-brand-600" />
             <p className="font-medium text-ink">Débito PSE</p>
-            <p className="text-sm text-muted">Serás redirigido al portal de tu banco (simulado)</p>
+            <p className="text-sm text-faint">Serás redirigido al portal de tu banco (simulado)</p>
           </div>
         </TabsContent>
 
@@ -199,7 +199,7 @@ export function PaymentStep({ onSuccess }: PaymentStepProps) {
           <div className="rounded-xl border border-line bg-surface p-6 text-center space-y-2">
             <Wallet className="h-10 w-10 mx-auto text-emerald-600" />
             <p className="font-medium text-ink">Bre-B</p>
-            <p className="text-sm text-muted">Pago instantáneo vía billetera digital (simulado)</p>
+            <p className="text-sm text-faint">Pago instantáneo vía billetera digital (simulado)</p>
           </div>
         </TabsContent>
       </Tabs>
@@ -207,7 +207,7 @@ export function PaymentStep({ onSuccess }: PaymentStepProps) {
       {/* Pay button */}
       <div className="border-t border-line pt-4 space-y-3">
         <div className="flex justify-between items-center">
-          <span className="text-sm text-muted">Total a pagar</span>
+          <span className="text-sm text-faint">Total a pagar</span>
           <span className="text-lg font-bold text-brand-600">{cop(total())}</span>
         </div>
 
@@ -226,7 +226,7 @@ export function PaymentStep({ onSuccess }: PaymentStepProps) {
           )}
         </Button>
 
-        <p className="text-center text-xs text-muted">
+        <p className="text-center text-xs text-faint">
           🔒 Pago 100% seguro · Cifrado SSL
         </p>
       </div>

@@ -64,7 +64,7 @@ export function RatingStars({
                 "transition-colors",
                 star <= active
                   ? "fill-yellow-400 text-yellow-400"
-                  : "fill-none text-muted",
+                  : "fill-none text-faint",
               )}
             />
           </button>

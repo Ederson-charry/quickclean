@@ -50,7 +50,7 @@ export default function DetalleServicio() {
   if (!assignment) {
     return (
       <div className="rounded-xl border border-line bg-surface p-8 text-center">
-        <p className="text-muted">Servicio no encontrado.</p>
+        <p className="text-faint">Servicio no encontrado.</p>
       </div>
     );
   }
@@ -63,7 +63,7 @@ export default function DetalleServicio() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-ink">Detalle del servicio</h1>
-          <p className="mt-0.5 text-sm text-muted">{assignment.time} · {assignment.durationHours}h</p>
+          <p className="mt-0.5 text-sm text-faint">{assignment.time} · {assignment.durationHours}h</p>
         </div>
         <Badge
           variant="outline"
@@ -121,14 +121,14 @@ export default function DetalleServicio() {
         <div className="space-y-2 text-sm">
           <div className="flex justify-between text-ink-2">
             <span className="flex items-center gap-1.5">
-              <Clock className="h-4 w-4 text-muted" />
+              <Clock className="h-4 w-4 text-faint" />
               Duración
             </span>
             <span className="font-medium">{assignment.durationHours} horas</span>
           </div>
           <div className="flex justify-between text-ink-2">
             <span className="flex items-center gap-1.5">
-              <User className="h-4 w-4 text-muted" />
+              <User className="h-4 w-4 text-faint" />
               Cliente
             </span>
             <span className="font-medium">{assignment.clientName}</span>

@@ -112,7 +112,7 @@ const columns: ColumnDef<Quicker, unknown>[] = [
     cell: () => (
       <div className="flex items-center gap-1">
         <button
-          className="flex h-7 w-7 items-center justify-center rounded-md text-muted transition-colors hover:bg-brand-50 hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+          className="flex h-7 w-7 items-center justify-center rounded-md text-faint transition-colors hover:bg-brand-50 hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
           aria-label="Ver Quicker"
           title="Ver"
         >
@@ -149,7 +149,7 @@ export default function Quickers() {
           <h1 className="text-2xl font-bold font-[var(--font-display)] text-ink">
             Gestionar Quickers
           </h1>
-          <p className="mt-0.5 text-sm text-muted">
+          <p className="mt-0.5 text-sm text-faint">
             {quickers?.length ?? 0} profesionales registrados
           </p>
         </div>
@@ -170,7 +170,7 @@ export default function Quickers() {
         {/* Search */}
         <div className="relative flex-1 max-w-sm">
           <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted pointer-events-none"
+            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-faint pointer-events-none"
             aria-hidden="true"
           />
           <Input

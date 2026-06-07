@@ -59,7 +59,7 @@ export function FileDrop({
           <button
             type="button"
             onClick={clear}
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-faint hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
             aria-label="Quitar archivo seleccionado"
           >
             <X className="h-4 w-4" />
@@ -94,7 +94,7 @@ export function FileDrop({
             <p className="text-sm font-medium text-ink">
               {dragging ? "Suelta el archivo aquí" : label}
             </p>
-            <p className="mt-0.5 text-xs text-muted">
+            <p className="mt-0.5 text-xs text-faint">
               {optional ? "Opcional · " : ""}Foto o PDF · Máx 10 MB
             </p>
           </div>

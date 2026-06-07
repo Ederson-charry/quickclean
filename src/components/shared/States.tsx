@@ -10,7 +10,7 @@ export function EmptyState({ title, hint, action }: { title: string; hint?: stri
   return (
     <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-line bg-surface py-12 text-center">
       <p className="font-medium text-ink">{title}</p>
-      {hint && <p className="mt-1 text-sm text-muted">{hint}</p>}
+      {hint && <p className="mt-1 text-sm text-faint">{hint}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
   );

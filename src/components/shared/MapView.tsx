@@ -74,7 +74,7 @@ export function MapView({ minutes = 8, km = 1.2, address }: MapViewProps) {
           <>
             <div className="h-4 w-px bg-line" />
             <div className="flex min-w-0 items-center gap-1.5 text-ink-2">
-              <MapPin className="h-4 w-4 shrink-0 text-muted" />
+              <MapPin className="h-4 w-4 shrink-0 text-faint" />
               <span className="truncate">{address}</span>
             </div>
           </>

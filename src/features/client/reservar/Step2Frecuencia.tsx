@@ -22,7 +22,7 @@ export function Step2Frecuencia() {
     <div className="space-y-6">
       <div>
         <h2 className="font-semibold text-ink mb-1">¿Con qué frecuencia?</h2>
-        <p className="text-sm text-muted">Los planes recurrentes tienen descuento</p>
+        <p className="text-sm text-faint">Los planes recurrentes tienen descuento</p>
       </div>
 
       <div
@@ -48,7 +48,7 @@ export function Step2Frecuencia() {
               <p className={cn("font-medium", data.frequency === value ? "text-brand-700" : "text-ink")}>
                 {label}
               </p>
-              <p className="text-sm text-muted">{sublabel}</p>
+              <p className="text-sm text-faint">{sublabel}</p>
             </div>
             {discount && (
               <Badge className="bg-success/10 text-success border-success/20 font-semibold">

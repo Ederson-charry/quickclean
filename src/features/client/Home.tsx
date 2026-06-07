@@ -40,7 +40,7 @@ export default function Home() {
           <h1 className="font-[var(--font-display)] text-2xl font-bold text-ink">
             ¡Hola, {firstName}!
           </h1>
-          <p className="text-sm text-muted mt-0.5">¿Qué necesitas hoy?</p>
+          <p className="text-sm text-faint mt-0.5">¿Qué necesitas hoy?</p>
         </div>
         <Avatar className="h-10 w-10">
           <AvatarFallback className="bg-brand-100 text-brand-700 text-sm font-semibold">
@@ -52,7 +52,7 @@ export default function Home() {
       {/* Search */}
       <div className="relative">
         <label htmlFor="home-search" className="sr-only">Buscar servicio</label>
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted pointer-events-none" aria-hidden="true" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-faint pointer-events-none" aria-hidden="true" />
         <Input
           id="home-search"
           type="search"
@@ -76,7 +76,7 @@ export default function Home() {
           </p>
           <Link
             to="/app/reservar"
-            className={buttonVariants({ variant: "default", className: "bg-white text-brand-600 hover:bg-brand-50 font-semibold" })}
+            className={buttonVariants({ variant: "default", className: "bg-white !text-brand-700 hover:bg-brand-50 font-semibold" })}
           >
             Agendar ahora
           </Link>
@@ -122,7 +122,7 @@ export default function Home() {
               <BookingCard booking={nextBooking} />
             ) : (
               <div className="rounded-xl border border-dashed border-line bg-surface p-5 text-center">
-                <p className="text-sm text-muted">Sin servicios próximos</p>
+                <p className="text-sm text-faint">Sin servicios próximos</p>
                 <Link
                   to="/app/reservar"
                   className={buttonVariants({ size: "sm", className: "mt-3 bg-brand-600 hover:bg-brand-700 text-white" })}
@@ -160,7 +160,7 @@ export default function Home() {
               </div>
             ) : (
               <div className="rounded-xl border border-dashed border-line bg-surface p-5 text-center">
-                <p className="text-sm text-muted">Sin servicios por calificar</p>
+                <p className="text-sm text-faint">Sin servicios por calificar</p>
               </div>
             )}
           </section>

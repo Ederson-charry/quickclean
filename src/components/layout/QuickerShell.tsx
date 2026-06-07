@@ -65,7 +65,7 @@ export function QuickerShell() {
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col gap-0.5">
                     <span className="font-semibold text-sm text-ink">{user?.name ?? "Quicker"}</span>
-                    <span className="text-xs text-muted">Quicker</span>
+                    <span className="text-xs text-faint">Quicker</span>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
@@ -96,7 +96,7 @@ export function QuickerShell() {
               to={item.to}
               activeOptions={item.exact ? { exact: true } : undefined}
               className={cn(
-                "flex flex-1 flex-col items-center gap-1 py-3 min-h-[56px] text-xs text-muted transition-colors",
+                "flex flex-1 flex-col items-center gap-1 py-3 min-h-[56px] text-xs text-faint transition-colors",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500/50",
               )}
               activeProps={{ className: "flex flex-1 flex-col items-center gap-1 py-3 min-h-[56px] text-xs text-brand-600 font-medium" }}

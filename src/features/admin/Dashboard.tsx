@@ -44,7 +44,7 @@ export default function Dashboard() {
         <h1 className="text-2xl font-bold font-[var(--font-display)] text-ink">
           Indicadores
         </h1>
-        <p className="mt-0.5 text-sm text-muted">Panel de control — QuickClean</p>
+        <p className="mt-0.5 text-sm text-faint">Panel de control — QuickClean</p>
       </div>
 
       {/* KPI grid: 4→2→1 */}
@@ -79,7 +79,7 @@ export default function Dashboard() {
         {/* Revenue bar chart */}
         <div className="col-span-1 lg:col-span-2 rounded-xl border border-line bg-surface p-5">
           <h2 className="text-base font-semibold text-ink mb-4">
-            Ingresos por mes <span className="text-xs text-muted font-normal">(millones COP)</span>
+            Ingresos por mes <span className="text-xs text-faint font-normal">(millones COP)</span>
           </h2>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={kpis.revenueByMonth} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>

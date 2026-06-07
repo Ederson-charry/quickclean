@@ -69,7 +69,7 @@ export function AssignmentCard({ assignment }: AssignmentCardProps) {
         </p>
       </div>
 
-      <ChevronRight className="h-4 w-4 shrink-0 text-muted" />
+      <ChevronRight className="h-4 w-4 shrink-0 text-faint" />
     </Link>
   );
 }

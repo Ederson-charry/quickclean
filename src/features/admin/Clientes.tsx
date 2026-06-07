@@ -207,7 +207,7 @@ export default function Clientes() {
             <Link
               to="/admin/clientes/$id"
               params={{ id: c.id }}
-              className="flex h-7 w-7 items-center justify-center rounded-md text-muted transition-colors hover:bg-brand-50 hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+              className="flex h-7 w-7 items-center justify-center rounded-md text-faint transition-colors hover:bg-brand-50 hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
               aria-label={`Editar ${c.name}`}
               title="Editar"
             >
@@ -215,7 +215,7 @@ export default function Clientes() {
             </Link>
             <button
               onClick={() => setToDelete(c)}
-              className="flex h-7 w-7 items-center justify-center rounded-md text-muted transition-colors hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger"
+              className="flex h-7 w-7 items-center justify-center rounded-md text-faint transition-colors hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger"
               aria-label={`Eliminar ${c.name}`}
               title="Eliminar"
             >
@@ -235,7 +235,7 @@ export default function Clientes() {
           <h1 className="text-2xl font-bold font-[var(--font-display)] text-ink">
             Gestionar Clientes
           </h1>
-          <p className="mt-0.5 text-sm text-muted">
+          <p className="mt-0.5 text-sm text-faint">
             {clients?.length ?? 0} clientes registrados
           </p>
         </div>
@@ -256,7 +256,7 @@ export default function Clientes() {
         {/* Search */}
         <div className="relative flex-1 max-w-sm">
           <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted pointer-events-none"
+            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-faint pointer-events-none"
             aria-hidden="true"
           />
           <Input

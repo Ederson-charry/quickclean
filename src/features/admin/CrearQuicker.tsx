@@ -85,7 +85,7 @@ export default function CrearQuicker() {
           to="/admin/quickers"
           className={cn(
             buttonVariants({ variant: "ghost", size: "icon-sm" }),
-            "text-muted hover:text-ink",
+            "text-faint hover:text-ink",
           )}
           aria-label="Volver a Quickers"
         >
@@ -95,7 +95,7 @@ export default function CrearQuicker() {
           <h1 className="text-2xl font-bold font-[var(--font-display)] text-ink">
             Crear Quicker
           </h1>
-          <p className="mt-0.5 text-sm text-muted">Registra un nuevo profesional</p>
+          <p className="mt-0.5 text-sm text-faint">Registra un nuevo profesional</p>
         </div>
       </div>
 
@@ -106,7 +106,7 @@ export default function CrearQuicker() {
             {/* Photo */}
             <div>
               <Label className="mb-2 block text-sm font-medium text-ink">
-                Foto de perfil <span className="text-muted font-normal">(opcional)</span>
+                Foto de perfil <span className="text-faint font-normal">(opcional)</span>
               </Label>
               <FileDrop
                 onFile={setAvatarFile}
@@ -283,7 +283,7 @@ export default function CrearQuicker() {
             {/* Notes */}
             <div className="space-y-1.5">
               <Label htmlFor="notes" className="text-sm font-medium text-ink">
-                Notas adicionales <span className="text-muted font-normal">(opcional)</span>
+                Notas adicionales <span className="text-faint font-normal">(opcional)</span>
               </Label>
               <Textarea
                 id="notes"
