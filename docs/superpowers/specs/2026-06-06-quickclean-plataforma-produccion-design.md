@@ -289,6 +289,18 @@ Integración: adaptador `erp.service.ts` (contrato a definir con GAF). Cada env�
 - **Conciliación y reembolsos:** módulo que cruza Openpay ↔ ERP; política de cancelación/reembolso, notas crédito.
 - **Reporte de conciliación para ERP/GAF:** QuickClean genera un **reporte/archivo de conciliación** (transacciones Openpay cobradas, reembolsos, comisiones de pasarela, neto por periodo, referencias de servicio/cliente) que **GAF y su ERP** consumen para registro contable y facturación. Disponible como pantalla (visor + filtros por periodo) y como **export estructurado** (CSV/JSON o el formato que defina el ERP). Cada generación/descarga del reporte queda **auditada**. Es el puente financiero entre lo que cobra Openpay y lo que contabiliza/factura el ERP.
 
+#### 7.2.1 Integración técnica Openpay (openpay.js)
+
+- **Tokenización cliente con `openpay.js`:** el PAN/CVV viajan **del navegador directo a Openpay**; el backend recibe solo un **token** + `device_session_id` (antifraude). La tarjeta **nunca toca la API NestJS** → reduce el alcance **PCI-DSS a SAQ A/A-EP** (coherente con el estándar de seguridad + ISO, §3).
+  - Front (`apps/web/src/lib/openpay.ts`): wrapper **tipado** que carga el script global (`openpay.v1.min.js` + `openpay-data.v1.min.js`), envuelve `OpenPay.token.create()` y `OpenPay.deviceData.setup()` en Promesas. **public key** en el front (segura).
+  - Back (`apps/api` módulo `payments`): recibe `{ token, deviceSessionId, ... }` y crea el `charge` contra la API server de Openpay con la **private key** (secreto en **AWS Secrets Manager**, nunca en el front).
+- **Flujos soportados por `PaymentStep`:**
+  - **Tarjeta:** tokeniza en navegador → `charge` en backend (3DS si aplica).
+  - **PSE:** el backend crea el cargo → Openpay devuelve **URL de redirección** al banco → retorno → confirmación por **webhook** (PSE es asíncrono).
+- **Webhooks:** endpoint en NestJS que recibe la confirmación asíncrona de Openpay → marca la reserva pagada → alimenta el reporte de conciliación. Verifica firma/origen del webhook.
+- **Reembolsos:** `refund` sobre el `charge` → módulo de conciliación / notas crédito.
+- **A confirmar en el dashboard de Openpay Colombia** (no documentado públicamente sin cuenta): hosts exactos de API (`(sandbox-)api.openpay.co/v1/{merchantId}`) y de los scripts JS `.co`, esquema de auth (Basic con private key), y catálogo de métodos de pago habilitados para el comercio.
+
 ---
 
 ## 8. Sub-proyecto 6 — Operación
