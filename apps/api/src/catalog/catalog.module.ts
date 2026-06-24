@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { AuditModule } from "../audit/audit.module";
+import { MfaModule } from "../mfa/mfa.module";
 import { PrismaService } from "../prisma/prisma.service";
 import { CatalogController } from "./catalog.controller";
 import { CatalogService } from "./catalog.service";
@@ -8,7 +9,7 @@ import { TariffService } from "./tariff.service";
 import { TarifasController } from "./tarifas.controller";
 
 @Module({
-  imports: [AuditModule],
+  imports: [AuditModule, MfaModule],
   controllers: [CatalogController, ServiciosController, TarifasController],
   providers: [CatalogService, TariffService, PrismaService],
   exports: [CatalogService, TariffService],
