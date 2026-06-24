@@ -10,15 +10,20 @@ const USERS: Record<Role, { name: string }> = {
 type SessionState = {
   role: Role;
   user: { name: string } | null;
+  /** Access token del backend (en memoria). El refresh vive en cookie HttpOnly. */
+  accessToken: string | null;
   login: (role: Role) => void;
   setRole: (role: Role) => void;
+  setSession: (accessToken: string) => void;
   logout: () => void;
 };
 
 export const useSession = create<SessionState>((set) => ({
   role: "client",
   user: null,
+  accessToken: null,
   login: (role) => set({ role, user: USERS[role] }),
   setRole: (role) => set({ role, user: USERS[role] }),
-  logout: () => set({ user: null }),
+  setSession: (accessToken) => set({ accessToken }),
+  logout: () => set({ user: null, accessToken: null }),
 }));

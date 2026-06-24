@@ -11,11 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useSession } from "@/stores/session";
+import { useAuth } from "@/hooks/useAuth";
 import type { Role } from "@/mocks/types";
 
 const loginSchema = z.object({
   email: z.string().email("Correo inválido"),
-  password: z.string().min(8, "Mínimo 8 caracteres"),
+  password: z.string().min(12, "Mínimo 12 caracteres"),
 });
 type LoginForm = z.infer<typeof loginSchema>;
 
@@ -33,6 +34,7 @@ const ROLE_HOME: Record<Role, string> = {
 
 export default function Login() {
   const { login } = useSession();
+  const { login: apiLogin } = useAuth();
   const navigate = useNavigate();
 
   const {
@@ -41,10 +43,20 @@ export default function Login() {
     formState: { errors, isSubmitting },
   } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) });
 
-  const onSubmit = async (_data: LoginForm) => {
-    login("client");
-    toast.success("¡Bienvenido, Laura!");
-    navigate({ to: "/app" });
+  const onSubmit = async (data: LoginForm) => {
+    try {
+      const res = await apiLogin(data);
+      if ("mustChangePassword" in res) {
+        toast.info("Debes cambiar tu contraseña antes de continuar.");
+        return;
+      }
+      // TODO: derivar el rol real del JWT cuando el backend exponga roles→UI.
+      login("client");
+      toast.success("Sesión iniciada");
+      navigate({ to: "/app" });
+    } catch {
+      toast.error("Credenciales inválidas");
+    }
   };
 
   const handleDemo = (role: Role) => {
