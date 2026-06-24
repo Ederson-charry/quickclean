@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "@tanstack/react-router";
-import { useBooking as useBookingQuery } from "@/hooks/queries";
-import { useRateBooking } from "@/hooks/queries";
+import { useBooking as useBookingQuery, useRateBooking } from "@/hooks/queries";
+import { useClientBooking, useRateReservation } from "@/hooks/catalog";
 import { RatingStars } from "@/components/shared/RatingStars";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,29 +11,32 @@ import { cop } from "@/lib/format";
 import { CheckCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { db } from "@/mocks/db";
+import { useSession } from "@/stores/session";
 import { cn } from "@/lib/utils";
 
-const ASPECT_CHIPS = [
-  "Puntualidad",
-  "Limpieza",
-  "Amabilidad",
-  "Comunicación",
-  "Cuidado del hogar",
-  "Eficiencia",
-];
-
+const ASPECT_CHIPS = ["Puntualidad", "Limpieza", "Amabilidad", "Comunicación", "Cuidado del hogar", "Eficiencia"];
 const TIP_OPTIONS = [
   { label: "Sin propina", value: 0 },
   { label: cop(5000), value: 5000 },
   { label: cop(10000), value: 10000 },
   { label: cop(20000), value: 20000 },
 ];
+const SERVICE_LABELS: Record<string, string> = {
+  hogar: "Aseo de Hogar",
+  profundo: "Aseo Profundo",
+  plomeria: "Plomería Express",
+  electricista: "Electricista",
+};
 
 export default function Calificar() {
   const { id } = useParams({ strict: false }) as { id: string };
   const navigate = useNavigate();
-  const { data: booking, isLoading, isError, refetch } = useBookingQuery(id);
-  const rateBooking = useRateBooking();
+  const useReal = !!useSession((s) => s.accessToken);
+
+  const realQ = useClientBooking(id, useReal);
+  const mockQ = useBookingQuery(id);
+  const rateReal = useRateReservation();
+  const rateMock = useRateBooking();
 
   const [stars, setStars] = useState(0);
   const [aspects, setAspects] = useState<string[]>([]);
@@ -41,20 +44,32 @@ export default function Calificar() {
   const [tip, setTip] = useState(0);
   const [submitted, setSubmitted] = useState(false);
 
-  if (isLoading) return <LoadingState rows={4} />;
-  if (isError || !booking) return <ErrorState onRetry={refetch} />;
+  const isLoading = useReal ? realQ.isLoading : mockQ.isLoading;
+  const isError = useReal ? realQ.isError : mockQ.isError;
+  const refetch = useReal ? realQ.refetch : mockQ.refetch;
+  const realB = realQ.data;
+  const mockB = mockQ.data;
+  const exists = useReal ? !!realB : !!mockB;
 
-  // If already rated, show a message
-  if (booking.rated) {
+  if (isLoading) return <LoadingState rows={4} />;
+  if (isError || !exists) return <ErrorState onRetry={() => refetch()} />;
+
+  const alreadyRated = useReal ? !!realB?.ratedAt : !!mockB?.rated;
+  const serviceLabel = useReal
+    ? (realB?.category?.name ?? "Servicio")
+    : (SERVICE_LABELS[mockB?.serviceType ?? "hogar"] ?? "Servicio");
+  const dateLabel = useReal ? (realB?.scheduledAt?.slice(0, 10) ?? "") : (mockB?.date ?? "");
+  const durationLabel = useReal ? realB?.duration : mockB?.duration;
+  const quicker = useReal ? undefined : db.quickers.find((q) => q.id === mockB?.quickerId);
+  const pending = useReal ? rateReal.isPending : rateMock.isPending;
+
+  if (alreadyRated) {
     return (
       <div className="max-w-md mx-auto text-center space-y-4 py-12">
         <CheckCircle className="h-16 w-16 text-success mx-auto" />
         <h2 className="font-semibold text-xl text-ink">Ya calificaste este servicio</h2>
         <p className="text-faint text-sm">¡Gracias por tu retroalimentación!</p>
-        <Button
-          onClick={() => navigate({ to: "/app/servicios" })}
-          className="bg-brand-600 hover:bg-brand-700 text-white"
-        >
+        <Button onClick={() => navigate({ to: "/app/servicios" })} className="bg-brand-600 hover:bg-brand-700 text-white">
           Ver mis servicios
         </Button>
       </div>
@@ -68,24 +83,14 @@ export default function Calificar() {
           <CheckCircle className="h-12 w-12 text-success" />
         </div>
         <div>
-          <h1 className="font-[var(--font-display)] text-2xl font-bold text-ink mb-2">
-            ¡Gracias por calificar!
-          </h1>
-          <p className="text-faint">
-            Tu retroalimentación ayuda a mejorar la experiencia QuickClean
-          </p>
+          <h1 className="font-[var(--font-display)] text-2xl font-bold text-ink mb-2">¡Gracias por calificar!</h1>
+          <p className="text-faint">Tu retroalimentación ayuda a mejorar la experiencia QuickClean</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
-          <a
-            href="/app/servicios"
-            className={buttonVariants({ className: "flex-1 bg-brand-600 hover:bg-brand-700 text-white" })}
-          >
+          <a href="/app/servicios" className={buttonVariants({ className: "flex-1 bg-brand-600 hover:bg-brand-700 text-white" })}>
             Ver mis servicios
           </a>
-          <a
-            href="/app"
-            className={buttonVariants({ variant: "outline", className: "flex-1 border-line" })}
-          >
+          <a href="/app" className={buttonVariants({ variant: "outline", className: "flex-1 border-line" })}>
             Ir al inicio
           </a>
         </div>
@@ -93,13 +98,8 @@ export default function Calificar() {
     );
   }
 
-  // Look up the quicker
-  const quicker = db.quickers.find((q) => q.id === booking.quickerId);
-
   function toggleAspect(aspect: string) {
-    setAspects((prev) =>
-      prev.includes(aspect) ? prev.filter((a) => a !== aspect) : [...prev, aspect],
-    );
+    setAspects((prev) => (prev.includes(aspect) ? prev.filter((a) => a !== aspect) : [...prev, aspect]));
   }
 
   async function handleSubmit() {
@@ -107,15 +107,18 @@ export default function Calificar() {
       toast.error("Selecciona una calificación antes de enviar");
       return;
     }
-
     try {
-      await rateBooking.mutateAsync({
-        bookingId: booking!.id,
-        stars,
-        tags: aspects,
-        comment: comment.trim() || undefined,
-        tip,
-      });
+      if (useReal) {
+        await rateReal.mutateAsync({ id, rating: stars, comment: comment.trim() || undefined });
+      } else {
+        await rateMock.mutateAsync({
+          bookingId: mockB!.id,
+          stars,
+          tags: aspects,
+          comment: comment.trim() || undefined,
+          tip,
+        });
+      }
       setSubmitted(true);
       toast.success("¡Calificación enviada!");
     } catch {
@@ -123,21 +126,11 @@ export default function Calificar() {
     }
   }
 
-  const SERVICE_LABELS: Record<string, string> = {
-    hogar: "Aseo de Hogar",
-    profundo: "Aseo Profundo",
-    plomeria: "Plomería Express",
-    electricista: "Electricista",
-  };
-
   return (
     <div className="max-w-lg mx-auto space-y-6">
-      <h1 className="font-[var(--font-display)] text-2xl font-bold text-ink">
-        Calificar servicio
-      </h1>
+      <h1 className="font-[var(--font-display)] text-2xl font-bold text-ink">Calificar servicio</h1>
 
-      {/* Quicker info */}
-      {quicker && (
+      {quicker ? (
         <div className="rounded-xl border border-line bg-surface p-5 flex items-center gap-4">
           <Avatar className="h-14 w-14">
             <AvatarFallback className="bg-brand-100 text-brand-700 text-lg font-semibold">
@@ -146,26 +139,24 @@ export default function Calificar() {
           </Avatar>
           <div>
             <p className="font-semibold text-ink">{quicker.name}</p>
-            <p className="text-sm text-ink-2">{SERVICE_LABELS[booking.serviceType]}</p>
-            <p className="text-sm text-ink-2">{booking.date} · {booking.duration}h</p>
+            <p className="text-sm text-ink-2">{serviceLabel}</p>
+            <p className="text-sm text-ink-2">{dateLabel} · {durationLabel}h</p>
           </div>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-line bg-surface p-5">
+          <p className="font-semibold text-ink">{serviceLabel}</p>
+          <p className="text-sm text-ink-2">{dateLabel} · {durationLabel}h</p>
         </div>
       )}
 
-      {/* Stars */}
       <div className="rounded-xl border border-line bg-surface p-5 space-y-3">
         <p className="font-medium text-ink">¿Cómo fue tu experiencia?</p>
         <div className="flex flex-col items-center gap-2 py-2">
-          <RatingStars
-            value={stars}
-            onChange={setStars}
-            size="lg"
-            showLabel
-          />
+          <RatingStars value={stars} onChange={setStars} size="lg" showLabel />
         </div>
       </div>
 
-      {/* Aspect chips */}
       <div className="space-y-3">
         <p className="font-medium text-ink">¿Qué destacas del servicio?</p>
         <div className="flex flex-wrap gap-2">
@@ -188,7 +179,6 @@ export default function Calificar() {
         </div>
       </div>
 
-      {/* Comment */}
       <div className="space-y-2">
         <label htmlFor="comment" className="font-medium text-ink block">
           Comentario (opcional)
@@ -203,7 +193,6 @@ export default function Calificar() {
         />
       </div>
 
-      {/* Tip chips */}
       <div className="space-y-3">
         <p className="font-medium text-ink">¿Quieres dejar propina?</p>
         <div className="grid grid-cols-4 gap-2">
@@ -226,14 +215,13 @@ export default function Calificar() {
         </div>
       </div>
 
-      {/* Submit */}
       <Button
         className="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold h-12"
         onClick={handleSubmit}
-        disabled={rateBooking.isPending}
+        disabled={pending}
         aria-label="Enviar calificación"
       >
-        {rateBooking.isPending ? (
+        {pending ? (
           <>
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             Enviando...
@@ -243,7 +231,6 @@ export default function Calificar() {
         )}
       </Button>
 
-      {/* Tip disclaimer */}
       {tip > 0 && (
         <p className="text-center text-xs text-faint">
           La propina de {cop(tip)} va directo a {quicker?.name ?? "tu Quicker"}

@@ -52,6 +52,8 @@ model Booking {
   quickerId         String?
   quicker           User?           @relation("BookingQuicker", fields: [quickerId], references: [id])
   ratedAt           DateTime?
+  rating            Int?
+  ratingComment     String?
   createdAt         DateTime        @default(now())
 
   @@index([clientId])

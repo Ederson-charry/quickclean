@@ -200,6 +200,7 @@ export interface ClientBooking {
   address: string;
   priceTotal: number;
   status: "agendado" | "en_curso" | "completado" | "cancelado";
+  ratedAt: string | null;
   category?: { name: string; slug: string; iconName: string };
 }
 
@@ -224,6 +225,34 @@ export interface AdminBooking {
   address: string;
   category?: { name: string };
   client?: { email: string };
+}
+
+export interface ClientBookingDetail extends ClientBooking {
+  ratedAt: string | null;
+  rating: number | null;
+}
+
+/** Detalle de una reserva propia (GET /reservas/:id). */
+export function useClientBooking(id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["reserva", id],
+    enabled,
+    queryFn: () => apiFetch<ClientBookingDetail>(`/reservas/${id}`, { headers: authHeaders() }),
+  });
+}
+
+/** Califica una reserva completada (POST /reservas/:id/calificar). */
+export function useRateReservation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, rating, comment }: { id: string; rating: number; comment?: string }) =>
+      apiFetch(`/reservas/${id}/calificar`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ rating, comment }),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["reservas"] }),
+  });
 }
 
 /** Cancela una reserva propia (cliente). */
