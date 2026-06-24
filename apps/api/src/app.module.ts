@@ -6,6 +6,7 @@ import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { AuditModule } from "./audit/audit.module";
 import { UsersModule } from "./users/users.module";
 import { AuthModule } from "./auth/auth.module";
+import { BookingModule } from "./booking/booking.module";
 import { CatalogModule } from "./catalog/catalog.module";
 import { HealthController } from "./health/health.controller";
 import { MfaModule } from "./mfa/mfa.module";
@@ -20,6 +21,7 @@ import { PrismaService } from "./prisma/prisma.service";
     MfaModule,
     AuditModule,
     CatalogModule,
+    BookingModule,
     UsersModule,
   ],
   controllers: [HealthController],
