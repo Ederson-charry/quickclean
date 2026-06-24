@@ -1,7 +1,9 @@
-import { Body, Controller, HttpCode, Post, Req, Res } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, Post, Req, Res, UseGuards } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
 import { LoginInput } from "@quickclean/shared";
 import type { Request, Response } from "express";
+import { CurrentUser, type AuthUser } from "../common/decorators/current-user.decorator";
+import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { AuthService } from "./auth.service";
 import { REFRESH_COOKIE, refreshCookieOptions } from "./refresh-cookie";
 import { TurnstileService } from "./turnstile.service";
@@ -12,6 +14,12 @@ export class AuthController {
     private readonly auth: AuthService,
     private readonly turnstile: TurnstileService,
   ) {}
+
+  @Get("me")
+  @UseGuards(JwtAuthGuard)
+  me(@CurrentUser() user: AuthUser) {
+    return this.auth.me(user.id);
+  }
 
   // Límite estricto: 5 intentos de login por minuto (sobre el global de 20).
   @Throttle({ default: { limit: 5, ttl: 60_000 } })

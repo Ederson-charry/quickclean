@@ -50,10 +50,9 @@ export default function Login() {
         toast.info("Debes cambiar tu contraseña antes de continuar.");
         return;
       }
-      // TODO: derivar el rol real del JWT cuando el backend exponga roles→UI.
-      login("client");
+      // el rol y los permisos reales ya quedaron en la sesión vía /auth/me
       toast.success("Sesión iniciada");
-      navigate({ to: "/app" });
+      navigate({ to: res.home });
     } catch {
       toast.error("Credenciales inválidas");
     }

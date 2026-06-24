@@ -15,6 +15,7 @@ function deps(overrides: Overrides = {}) {
         credential: { passwordHash: "h", passwordChangedAt: new Date(), mustChangePassword: false },
       }),
       permissionsOf: async () => [],
+      profile: async () => ({ id: "u1", email: "a@b.co", roles: ["super_admin"], permissions: ["audit.read"] }),
       touchActivity: async () => {},
       isInactive: async () => false,
       ...overrides.users,
@@ -106,6 +107,19 @@ describe("AuthService.refresh", () => {
 
   it("sin refresh token lanza Unauthorized", async () => {
     await expect(build(deps()).refresh(undefined)).rejects.toThrow(UnauthorizedException);
+  });
+});
+
+describe("AuthService.me", () => {
+  it("devuelve el perfil con roles y permisos", async () => {
+    const r = await build(deps()).me("u1");
+    expect(r.roles).toContain("super_admin");
+    expect(r.permissions).toContain("audit.read");
+  });
+
+  it("lanza Unauthorized si el usuario no existe", async () => {
+    const svc = build(deps({ users: { profile: async () => null } }));
+    await expect(svc.me("u1")).rejects.toThrow();
   });
 });
 
