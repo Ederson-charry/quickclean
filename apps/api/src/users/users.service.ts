@@ -26,6 +26,27 @@ export class UsersService {
     return [...set];
   }
 
+  /** Perfil para el front: identidad + roles + permisos (un solo query). */
+  async profile(
+    userId: string,
+  ): Promise<{ id: string; email: string; roles: string[]; permissions: string[] } | null> {
+    const row = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        roles: { include: { role: { include: { permissions: { include: { permission: true } } } } } },
+      },
+    });
+    if (!row) {
+      return null;
+    }
+    const permissions = new Set<string>();
+    const roles = row.roles.map((ur) => {
+      ur.role.permissions.forEach((rp) => permissions.add(rp.permission.key));
+      return ur.role.key;
+    });
+    return { id: row.id, email: row.email, roles, permissions: [...permissions] };
+  }
+
   async isInactive(userId: string): Promise<boolean> {
     const u = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!u) {

@@ -106,6 +106,15 @@ export class AuthService {
     return issued;
   }
 
+  /** Perfil del usuario autenticado (identidad + roles + permisos). */
+  async me(userId: string): Promise<{ id: string; email: string; roles: string[]; permissions: string[] }> {
+    const profile = await this.users.profile(userId);
+    if (!profile) {
+      throw new UnauthorizedException("Usuario no encontrado");
+    }
+    return profile;
+  }
+
   /** Rota el refresh presentado y re-deriva permisos actuales del usuario. */
   async refresh(presented: string | undefined, ctx: Ctx = {}): Promise<IssuedTokens> {
     if (!presented) {

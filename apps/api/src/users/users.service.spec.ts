@@ -34,6 +34,13 @@ describe("UsersService (integración)", () => {
     expect(await users.permissionsOf(id)).toEqual([]);
   });
 
+  it("profile devuelve email y roles/permisos vacíos para usuario sin roles", async () => {
+    const p = await users.profile(id);
+    expect(p?.email).toContain("@x.co");
+    expect(p?.roles).toEqual([]);
+    expect(p?.permissions).toEqual([]);
+  });
+
   it("setStatus cambia el estado", async () => {
     const u = await users.setStatus(id, "suspended");
     expect(u.status).toBe("suspended");
