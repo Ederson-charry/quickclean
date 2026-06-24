@@ -11,6 +11,8 @@ const PERMS = [
   "tariff.assign",
   "user.manage",
   "assignment.manage",
+  "booking.read",
+  "booking.manage",
 ];
 
 async function main(): Promise<void> {

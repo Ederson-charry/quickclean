@@ -20,6 +20,45 @@ enum TariffStatus {
   expired
 }
 
+enum BookingStatus {
+  agendado
+  en_curso
+  completado
+  cancelado
+}
+
+/// Reserva de servicio. Guarda snapshot de tariffId y del precio calculado:
+/// aunque la tarifa cambie/expire después, la reserva conserva su precio.
+model Booking {
+  id                String          @id @default(uuid())
+  clientId          String
+  client            User            @relation("BookingClient", fields: [clientId], references: [id])
+  serviceCategoryId String
+  category          ServiceCategory @relation(fields: [serviceCategoryId], references: [id])
+  tariffId          String
+  tariff            Tariff          @relation(fields: [tariffId], references: [id])
+  duration          Int
+  frequency         String
+  size              String
+  supplies          Boolean         @default(false)
+  scheduledAt       DateTime
+  address           String
+  notes             String?
+  pets              Boolean         @default(false)
+  priceLabor        Int
+  priceTotal        Int
+  payout            Int
+  status            BookingStatus   @default(agendado)
+  quickerId         String?
+  quicker           User?           @relation("BookingQuicker", fields: [quickerId], references: [id])
+  ratedAt           DateTime?
+  createdAt         DateTime        @default(now())
+
+  @@index([clientId])
+  @@index([status])
+  @@index([serviceCategoryId])
+}
+
 /// Catálogo dinámico de servicios (reemplaza el enum fijo ServiceType).
 model ServiceCategory {
   id          String    @id @default(uuid())
@@ -33,6 +72,7 @@ model ServiceCategory {
   createdAt   DateTime  @default(now())
   archivedAt  DateTime?
   tariffs     Tariff[]
+  bookings    Booking[]
 
   @@index([active])
 }
@@ -51,6 +91,7 @@ model Tariff {
   publishedAt       DateTime?
   createdAt         DateTime        @default(now())
   rules             TariffRule[]
+  bookings          Booking[]
 
   @@index([serviceCategoryId])
   @@index([status])
@@ -122,6 +163,8 @@ model User {
   mfaFactors      MfaFactor[]
   recoveryCodes   RecoveryCode[]
   roles           UserRole[]
+  bookingsAsClient  Booking[] @relation("BookingClient")
+  bookingsAsQuicker Booking[] @relation("BookingQuicker")
 }
 
 model Credential {
