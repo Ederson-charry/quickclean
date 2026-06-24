@@ -4,6 +4,7 @@ import { APP_GUARD } from "@nestjs/core";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { AuditModule } from "./audit/audit.module";
 import { AuthModule } from "./auth/auth.module";
+import { CatalogModule } from "./catalog/catalog.module";
 import { HealthController } from "./health/health.controller";
 import { MfaModule } from "./mfa/mfa.module";
 import { PrismaService } from "./prisma/prisma.service";
@@ -15,6 +16,7 @@ import { PrismaService } from "./prisma/prisma.service";
     AuthModule,
     MfaModule,
     AuditModule,
+    CatalogModule,
   ],
   controllers: [HealthController],
   providers: [PrismaService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

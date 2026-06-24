@@ -13,6 +13,62 @@ enum AuditOutcome {
   denied
 }
 
+enum TariffStatus {
+  draft
+  scheduled
+  active
+  expired
+}
+
+/// Catálogo dinámico de servicios (reemplaza el enum fijo ServiceType).
+model ServiceCategory {
+  id          String    @id @default(uuid())
+  slug        String    @unique
+  name        String
+  description String?
+  iconName    String // nombre del icono lucide-react
+  colorToken  String // token de color de marca (ej. brand-600)
+  active      Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  archivedAt  DateTime?
+  tariffs     Tariff[]
+
+  @@index([active])
+}
+
+/// Tarifa versionada: nunca se edita en sitio; publicar = nueva versión que
+/// cierra la anterior (effectiveTo). Las reservas guardan snapshot de tariffId.
+model Tariff {
+  id                String          @id @default(uuid())
+  serviceCategoryId String
+  category          ServiceCategory @relation(fields: [serviceCategoryId], references: [id])
+  name              String
+  effectiveFrom     DateTime
+  effectiveTo       DateTime?
+  status            TariffStatus    @default(draft)
+  publishedBy       String?
+  publishedAt       DateTime?
+  createdAt         DateTime        @default(now())
+  rules             TariffRule[]
+
+  @@index([serviceCategoryId])
+  @@index([status])
+}
+
+/// Regla de precio de una tarifa (dimensión + clave + modificador).
+model TariffRule {
+  id           String @id @default(uuid())
+  tariffId     String
+  tariff       Tariff @relation(fields: [tariffId], references: [id], onDelete: Cascade)
+  dimension    String // duration|frequency|size|supplies|platform_fee|payout_pct
+  key          String // clave dentro de la dimensión ("4", "semanal", "M"); "" para escalares
+  modifierType String // base|percent|multiplier|flat
+  value        Float
+
+  @@index([tariffId])
+}
+
 /// Bitácora de auditoría append-only y encadenada por hash (tamper-evident).
 /// UPDATE/DELETE bloqueados por trigger a nivel Postgres (ver migración audit_immutability).
 model AuditLog {
