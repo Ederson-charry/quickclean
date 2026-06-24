@@ -2,7 +2,7 @@ import { Body, Controller, Get, NotFoundException, Param, Post, UseGuards } from
 import { CurrentUser, type AuthUser } from "../common/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { BookingService } from "./booking.service";
-import { CreateBookingInput } from "./booking.schemas";
+import { CreateBookingInput, RateBookingInput } from "./booking.schemas";
 
 @Controller("reservas")
 @UseGuards(JwtAuthGuard)
@@ -35,5 +35,11 @@ export class BookingController {
       throw new NotFoundException("Reserva no encontrada");
     }
     return this.bookings.cancel(id, user.id);
+  }
+
+  @Post(":id/calificar")
+  calificar(@Param("id") id: string, @Body() body: unknown, @CurrentUser() user: AuthUser) {
+    const input = RateBookingInput.parse(body);
+    return this.bookings.rate(id, user.id, input.rating, input.comment);
   }
 }

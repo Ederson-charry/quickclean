@@ -29,7 +29,7 @@ function realToBooking(b: ClientBooking): Booking {
     pets: false,
     total: b.priceTotal,
     status: b.status,
-    rated: false,
+    rated: !!b.ratedAt,
   };
 }
 

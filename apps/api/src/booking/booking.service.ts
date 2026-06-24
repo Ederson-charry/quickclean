@@ -128,6 +128,33 @@ export class BookingService {
     return updated;
   }
 
+  /** El cliente califica una reserva completada (1-5 + comentario). Auditado. */
+  async rate(id: string, clientId: string, rating: number, comment: string | undefined): Promise<Booking> {
+    const booking = await this.prisma.booking.findUnique({ where: { id } });
+    if (!booking || booking.clientId !== clientId) {
+      throw new NotFoundException("Reserva no encontrada");
+    }
+    if (booking.status !== "completado") {
+      throw new BadRequestException("Solo se califican servicios completados");
+    }
+    if (booking.ratedAt) {
+      throw new BadRequestException("Esta reserva ya fue calificada");
+    }
+    const updated = await this.prisma.booking.update({
+      where: { id },
+      data: { rating, ratingComment: comment, ratedAt: new Date() },
+    });
+    await this.audit.record({
+      action: "booking.rate",
+      outcome: "success",
+      actorId: clientId,
+      resourceType: "booking",
+      resourceId: id,
+      metadata: { rating },
+    });
+    return updated;
+  }
+
   async cancel(id: string, actorId: string): Promise<Booking> {
     const booking = await this.prisma.booking.findUnique({ where: { id } });
     if (!booking) {

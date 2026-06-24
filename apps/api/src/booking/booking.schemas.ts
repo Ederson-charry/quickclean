@@ -12,3 +12,9 @@ export const CreateBookingInput = z.object({
   pets: z.coerce.boolean().optional(),
 });
 export type CreateBookingInput = z.infer<typeof CreateBookingInput>;
+
+export const RateBookingInput = z.object({
+  rating: z.coerce.number().int().min(1).max(5),
+  comment: z.string().optional(),
+});
+export type RateBookingInput = z.infer<typeof RateBookingInput>;

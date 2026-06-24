@@ -125,4 +125,29 @@ describe("BookingService (integración) — snapshot de tarifa", () => {
     // ya completada: no admite más transiciones
     await expect(bookings.transition(b.id, "cancelado", clientId)).rejects.toThrow();
   });
+
+  it("califica una reserva completada y rechaza calificar dos veces o una no completada", async () => {
+    const pending = await prisma.booking.create({
+      data: {
+        clientId, serviceCategoryId: categoryId, tariffId: tariffV1Id,
+        duration: 4, frequency: "unica", size: "S", supplies: false,
+        scheduledAt: new Date(), address: "x", priceLabor: 1, priceTotal: 1, payout: 1,
+        status: "agendado",
+      },
+    });
+    await expect(bookings.rate(pending.id, clientId, 5, undefined)).rejects.toThrow(); // no completada
+
+    const done = await prisma.booking.create({
+      data: {
+        clientId, serviceCategoryId: categoryId, tariffId: tariffV1Id,
+        duration: 4, frequency: "unica", size: "S", supplies: false,
+        scheduledAt: new Date(), address: "x", priceLabor: 1, priceTotal: 1, payout: 1,
+        status: "completado",
+      },
+    });
+    const rated = await bookings.rate(done.id, clientId, 4, "Buen servicio");
+    expect(rated.rating).toBe(4);
+    expect(rated.ratedAt).not.toBeNull();
+    await expect(bookings.rate(done.id, clientId, 3, undefined)).rejects.toThrow(); // doble
+  });
 });
