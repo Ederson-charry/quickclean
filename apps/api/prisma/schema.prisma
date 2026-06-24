@@ -7,6 +7,39 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum AuditOutcome {
+  success
+  failure
+  denied
+}
+
+/// Bitácora de auditoría append-only y encadenada por hash (tamper-evident).
+/// UPDATE/DELETE bloqueados por trigger a nivel Postgres (ver migración audit_immutability).
+model AuditLog {
+  id           String       @id @default(uuid())
+  seq          BigInt       @unique @default(autoincrement())
+  occurredAt   DateTime     @default(now())
+  actorId      String?
+  actorRole    String?
+  action       String
+  resourceType String?
+  resourceId   String?
+  outcome      AuditOutcome
+  ip           String?
+  userAgent    String?
+  before       Json?
+  after        Json?
+  metadata     Json?
+  requestId    String?
+  hashPrev     String
+  hashSelf     String       @unique
+
+  @@index([occurredAt])
+  @@index([actorId])
+  @@index([action])
+  @@index([outcome])
+}
+
 enum UserStatus {
   active
   locked
