@@ -23,4 +23,8 @@ describe("Auditoría admin (e2e)", () => {
   it("GET /admin/auditoria/verify sin token → 401", () => {
     return request(app.getHttpServer()).get("/admin/auditoria/verify").expect(401);
   });
+
+  it("GET /admin/auditoria/export sin token → 401", () => {
+    return request(app.getHttpServer()).get("/admin/auditoria/export?format=csv").expect(401);
+  });
 });

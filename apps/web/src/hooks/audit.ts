@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { apiFetch } from "@/lib/http";
+import { apiFetch, apiUrl } from "@/lib/http";
 import { useSession } from "@/stores/session";
 
 export type AuditOutcome = "success" | "failure" | "denied";
@@ -81,4 +81,29 @@ export function useAuditVerify(enabled: boolean) {
     enabled,
     queryFn: () => apiFetch<VerifyResult>("/admin/auditoria/verify", { headers: authHeaders() }),
   });
+}
+
+/** Descarga la bitácora filtrada (CSV o JSON). La exportación se audita en el backend. */
+export async function downloadAuditExport(filters: AuditFilters, format: "csv" | "json"): Promise<void> {
+  const params = new URLSearchParams({ format });
+  for (const k of ["action", "actorId", "outcome", "ip", "from", "to"] as const) {
+    const v = filters[k];
+    if (v) params.set(k, String(v));
+  }
+  const res = await fetch(apiUrl(`/admin/auditoria/export?${params.toString()}`), {
+    credentials: "include",
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `auditoria.${format}`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }

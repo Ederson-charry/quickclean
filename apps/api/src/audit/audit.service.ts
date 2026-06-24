@@ -94,7 +94,7 @@ export class AuditService {
     });
   }
 
-  async list(filter: AuditListFilter) {
+  private whereFrom(filter: AuditListFilter): Prisma.AuditLogWhereInput {
     const where: Prisma.AuditLogWhereInput = {};
     if (filter.action) where.action = filter.action;
     if (filter.actorId) where.actorId = filter.actorId;
@@ -103,6 +103,11 @@ export class AuditService {
     if (filter.from || filter.to) {
       where.occurredAt = { ...(filter.from && { gte: filter.from }), ...(filter.to && { lte: filter.to }) };
     }
+    return where;
+  }
+
+  async list(filter: AuditListFilter) {
+    const where = this.whereFrom(filter);
     const page = Math.max(1, filter.page ?? 1);
     const pageSize = Math.min(100, Math.max(1, filter.pageSize ?? 20));
     const [rows, total] = await this.prisma.$transaction([
@@ -115,6 +120,19 @@ export class AuditService {
       this.prisma.auditLog.count({ where }),
     ]);
     return { items: rows.map((r) => ({ ...r, seq: r.seq.toString() })), total, page, pageSize };
+  }
+
+  /** Exporta los eventos que cumplen el filtro (tope de seguridad para no volcar todo). */
+  async export(filter: AuditListFilter) {
+    const CAP = 5000;
+    const rows = await this.prisma.auditLog.findMany({
+      where: this.whereFrom(filter),
+      orderBy: { seq: "desc" },
+      take: CAP + 1,
+    });
+    const capped = rows.length > CAP;
+    const items = rows.slice(0, CAP).map((r) => ({ ...r, seq: r.seq.toString() }));
+    return { items, capped };
   }
 
   /** Recorre toda la cadena y detecta manipulación. */
