@@ -211,6 +211,33 @@ export function useMyReservations(enabled: boolean) {
   });
 }
 
+export interface AdminBooking {
+  id: string;
+  scheduledAt: string;
+  status: "agendado" | "en_curso" | "completado" | "cancelado";
+  priceTotal: number;
+  payout: number;
+  duration: number;
+  frequency: string;
+  size: string;
+  supplies: boolean;
+  address: string;
+  category?: { name: string };
+  client?: { email: string };
+}
+
+/** Reservas (admin, requiere booking.read), filtrable por estado. */
+export function useAdminReservations(status: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["admin-reservas", status],
+    enabled,
+    queryFn: () =>
+      apiFetch<AdminBooking[]>(`/admin/reservas${status ? `?status=${status}` : ""}`, {
+        headers: authHeaders(),
+      }),
+  });
+}
+
 /** Previsualiza el precio con la tarifa vigente (endpoint público). */
 export function usePricePreview(input: PreviewInput | null) {
   return useQuery({
