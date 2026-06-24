@@ -1,12 +1,13 @@
 import { Link } from "@tanstack/react-router";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { useMyBookings } from "@/hooks/queries";
-import { type ClientBooking, useMyReservations } from "@/hooks/catalog";
+import { type ClientBooking, useCancelReservation, useMyReservations } from "@/hooks/catalog";
 import { BookingCard } from "@/components/shared/BookingCard";
 import { LoadingState, EmptyState, ErrorState } from "@/components/shared/States";
 import type { Booking, Duration, Frequency, ServiceType } from "@/mocks/types";
 import { useSession } from "@/stores/session";
-import { Star } from "lucide-react";
+import { Star, X } from "lucide-react";
+import { toast } from "sonner";
 
 function slugToType(slug: string | undefined): ServiceType {
   if (slug && (slug.includes("profund") || slug.includes("post-obra"))) return "profundo";
@@ -38,6 +39,7 @@ export default function MisServicios() {
 
   const real = useMyReservations(useReal);
   const mock = useMyBookings();
+  const cancel = useCancelReservation();
 
   const isLoading = useReal ? real.isLoading : mock.isLoading;
   const isError = useReal ? real.isError : mock.isError;
@@ -71,12 +73,29 @@ export default function MisServicios() {
       <div className="space-y-3">
         {bookings.map((booking) => {
           const canRate = booking.status === "completado" && !booking.rated;
+          const canCancel = useReal && (booking.status === "agendado" || booking.status === "en_curso");
           return (
             <BookingCard
               key={booking.id}
               booking={booking}
               action={
-                canRate ? (
+                canCancel ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 border-danger/30 text-danger hover:bg-danger/5"
+                    disabled={cancel.isPending}
+                    onClick={() =>
+                      cancel.mutate(booking.id, {
+                        onSuccess: () => toast.success("Reserva cancelada"),
+                        onError: () => toast.error("No se pudo cancelar"),
+                      })
+                    }
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Cancelar
+                  </Button>
+                ) : canRate ? (
                   <Link
                     to="/app/servicios/$id/calificar"
                     params={{ id: booking.id }}

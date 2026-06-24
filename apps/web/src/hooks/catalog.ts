@@ -226,6 +226,30 @@ export interface AdminBooking {
   client?: { email: string };
 }
 
+/** Cancela una reserva propia (cliente). */
+export function useCancelReservation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch(`/reservas/${id}/cancelar`, { method: "POST", headers: authHeaders() }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["reservas"] }),
+  });
+}
+
+/** Cambia el estado de una reserva (admin, booking.manage). */
+export function useTransitionBooking() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      apiFetch(`/admin/reservas/${id}/estado`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ status }),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-reservas"] }),
+  });
+}
+
 /** Reservas (admin, requiere booking.read), filtrable por estado. */
 export function useAdminReservations(status: string, enabled: boolean) {
   return useQuery({
