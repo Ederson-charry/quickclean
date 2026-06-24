@@ -66,4 +66,24 @@ export class AuthService {
     const permissions = await this.users.permissionsOf(user.id);
     return this.tokens.issue({ userId: user.id, permissions, ...ctx });
   }
+
+  /** Rota el refresh presentado y re-deriva permisos actuales del usuario. */
+  async refresh(presented: string | undefined): Promise<IssuedTokens> {
+    if (!presented) {
+      throw new UnauthorizedException("Sin refresh token");
+    }
+    return this.tokens.rotate(presented, (userId) => this.users.permissionsOf(userId));
+  }
+
+  /** Revoca la familia del refresh presentado (idempotente). */
+  async logout(presented: string | undefined): Promise<void> {
+    if (!presented) {
+      return;
+    }
+    const sep = presented.indexOf(":");
+    const familyId = sep === -1 ? "" : presented.slice(0, sep);
+    if (familyId) {
+      await this.tokens.revokeFamily(familyId);
+    }
+  }
 }

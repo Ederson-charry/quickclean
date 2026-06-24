@@ -63,7 +63,16 @@ export class TokenService {
    * Rota un refresh token. Si el token presentado no existe o ya fue rotado
    * (revocado), se asume robo y se revoca toda la familia.
    */
-  async rotate(presented: string, permissions: string[]): Promise<IssuedTokens> {
+  /**
+   * Rota un refresh token. `resolvePermissions` recibe el userId de la sesión
+   * y devuelve los permisos actuales (se re-derivan en cada rotación, no se
+   * arrastra un snapshot viejo). Si el token no existe, ya fue rotado (revocado)
+   * o expiró, se asume robo y se revoca toda la familia.
+   */
+  async rotate(
+    presented: string,
+    resolvePermissions: (userId: string) => Promise<string[]> | string[],
+  ): Promise<IssuedTokens> {
     const sep = presented.indexOf(":");
     const familyId = sep === -1 ? "" : presented.slice(0, sep);
     const secret = sep === -1 ? "" : presented.slice(sep + 1);
@@ -72,7 +81,6 @@ export class TokenService {
       where: { familyId, refreshTokenHash: sha(secret) },
     });
 
-    // inválido si no existe, ya fue rotado (revocado) o expiró: posible robo → revoca la familia
     if (!match || match.revokedAt || match.expiresAt.getTime() <= Date.now()) {
       await this.revokeFamily(familyId);
       throw new UnauthorizedException("Refresh inválido");
@@ -82,6 +90,7 @@ export class TokenService {
       where: { id: match.id },
       data: { revokedAt: new Date() },
     });
+    const permissions = await resolvePermissions(match.userId);
     return this.persist(match.userId, permissions, familyId, match.ip ?? undefined, match.userAgent ?? undefined);
   }
 

@@ -3,6 +3,7 @@ import { Throttle } from "@nestjs/throttler";
 import { LoginInput } from "@quickclean/shared";
 import type { Request, Response } from "express";
 import { AuthService } from "./auth.service";
+import { REFRESH_COOKIE, refreshCookieOptions } from "./refresh-cookie";
 import { TurnstileService } from "./turnstile.service";
 
 @Controller("auth")
@@ -25,14 +26,31 @@ export class AuthController {
     });
 
     if ("refreshToken" in result) {
-      res.cookie("rt", result.refreshToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "strict",
-        path: "/auth",
-      });
+      res.cookie(REFRESH_COOKIE, result.refreshToken, refreshCookieOptions);
       return { accessToken: result.accessToken };
     }
     return result; // { mustChangePassword: true }
+  }
+
+  @Post("refresh")
+  @HttpCode(200)
+  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const presented = req.cookies?.[REFRESH_COOKIE] as string | undefined;
+    try {
+      const tokens = await this.auth.refresh(presented);
+      res.cookie(REFRESH_COOKIE, tokens.refreshToken, refreshCookieOptions);
+      return { accessToken: tokens.accessToken };
+    } catch (err) {
+      // refresh inválido/expirado/robado → limpia la cookie y propaga 401
+      res.clearCookie(REFRESH_COOKIE, refreshCookieOptions);
+      throw err;
+    }
+  }
+
+  @Post("logout")
+  @HttpCode(204)
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    await this.auth.logout(req.cookies?.[REFRESH_COOKIE] as string | undefined);
+    res.clearCookie(REFRESH_COOKIE, refreshCookieOptions);
   }
 }

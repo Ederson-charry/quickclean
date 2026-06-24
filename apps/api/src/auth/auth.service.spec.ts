@@ -1,5 +1,5 @@
 import { ForbiddenException, UnauthorizedException } from "@nestjs/common";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { AuthService } from "./auth.service";
 
 type Overrides = Record<string, Record<string, unknown>>;
@@ -26,7 +26,18 @@ function deps(overrides: Overrides = {}) {
       nextMidnightBogota: () => new Date(Date.now() + 1000),
       ...overrides.lockout,
     },
-    tokens: { issue: async () => ({ accessToken: "a", refreshToken: "r" }), ...overrides.tokens },
+    tokens: {
+      issue: async () => ({ accessToken: "a", refreshToken: "r" }),
+      rotate: async (
+        _presented: string,
+        resolve: (userId: string) => Promise<string[]> | string[],
+      ) => {
+        await resolve("u1");
+        return { accessToken: "a2", refreshToken: "r2" };
+      },
+      revokeFamily: async () => {},
+      ...overrides.tokens,
+    },
     prisma: { user: { update: async () => ({}) }, ...overrides.prisma },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any;
@@ -63,5 +74,36 @@ describe("AuthService.login", () => {
     const svc = build(deps({ password: { verify: async () => true, isExpired: () => true } }));
     const r = await svc.login(cred, {});
     expect("mustChangePassword" in r && r.mustChangePassword).toBe(true);
+  });
+});
+
+describe("AuthService.refresh", () => {
+  it("rota y re-deriva permisos del usuario", async () => {
+    const d = deps();
+    const permsSpy = vi.spyOn(d.users, "permissionsOf");
+    const svc = build(d);
+    const r = await svc.refresh("fam:secreto");
+    expect(r.accessToken).toBe("a2");
+    expect(permsSpy).toHaveBeenCalledWith("u1");
+  });
+
+  it("sin refresh token lanza Unauthorized", async () => {
+    await expect(build(deps()).refresh(undefined)).rejects.toThrow(UnauthorizedException);
+  });
+});
+
+describe("AuthService.logout", () => {
+  it("revoca la familia del refresh presentado", async () => {
+    const d = deps();
+    const revokeSpy = vi.spyOn(d.tokens, "revokeFamily");
+    await build(d).logout("fam123:secreto");
+    expect(revokeSpy).toHaveBeenCalledWith("fam123");
+  });
+
+  it("sin token no revoca nada (no lanza)", async () => {
+    const d = deps();
+    const revokeSpy = vi.spyOn(d.tokens, "revokeFamily");
+    await expect(build(d).logout(undefined)).resolves.toBeUndefined();
+    expect(revokeSpy).not.toHaveBeenCalled();
   });
 });
