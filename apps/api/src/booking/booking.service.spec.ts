@@ -102,4 +102,27 @@ describe("BookingService (integración) — snapshot de tarifa", () => {
     });
     await expect(bookings.cancel(done.id, clientId)).rejects.toThrow();
   });
+
+  it("transiciona agendado → en_curso → completado y rechaza saltos inválidos", async () => {
+    const b = await bookings.create(
+      clientId,
+      CreateBookingInput.parse({
+        serviceCategoryId: categoryId,
+        duration: 4,
+        frequency: "unica",
+        size: "S",
+        supplies: false,
+        scheduledAt: new Date(Date.now() + 86_400_000),
+        address: "Calle 9",
+      }),
+    );
+    // salto inválido agendado → completado
+    await expect(bookings.transition(b.id, "completado", clientId)).rejects.toThrow();
+    const a = await bookings.transition(b.id, "en_curso", clientId);
+    expect(a.status).toBe("en_curso");
+    const c = await bookings.transition(b.id, "completado", clientId);
+    expect(c.status).toBe("completado");
+    // ya completada: no admite más transiciones
+    await expect(bookings.transition(b.id, "cancelado", clientId)).rejects.toThrow();
+  });
 });

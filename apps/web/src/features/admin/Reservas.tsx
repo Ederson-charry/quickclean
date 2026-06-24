@@ -1,6 +1,8 @@
 import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -11,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { DataTable } from "@/components/shared/DataTable";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/States";
-import { type AdminBooking, useAdminReservations } from "@/hooks/catalog";
+import { type AdminBooking, useAdminReservations, useTransitionBooking } from "@/hooks/catalog";
 import { cop, fechaHora } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/stores/session";
@@ -26,6 +28,41 @@ const STATUS = {
 function StatusBadge({ status }: { status: AdminBooking["status"] }) {
   const s = STATUS[status];
   return <Badge className={cn("font-medium", s.cls)}>{s.label}</Badge>;
+}
+
+function RowActions({ b }: { b: AdminBooking }) {
+  const transition = useTransitionBooking();
+  const act = (status: string, label: string) =>
+    transition.mutate(
+      { id: b.id, status },
+      { onSuccess: () => toast.success(`Reserva ${label}`), onError: () => toast.error("No se pudo actualizar") },
+    );
+  const cancelBtn = (
+    <Button size="sm" variant="ghost" className="text-danger hover:bg-danger/5" onClick={() => act("cancelado", "cancelada")}>
+      Cancelar
+    </Button>
+  );
+  if (b.status === "agendado") {
+    return (
+      <div className="flex gap-1">
+        <Button size="sm" variant="outline" onClick={() => act("en_curso", "iniciada")}>
+          Iniciar
+        </Button>
+        {cancelBtn}
+      </div>
+    );
+  }
+  if (b.status === "en_curso") {
+    return (
+      <div className="flex gap-1">
+        <Button size="sm" className="bg-success text-white hover:bg-success/90" onClick={() => act("completado", "completada")}>
+          Completar
+        </Button>
+        {cancelBtn}
+      </div>
+    );
+  }
+  return <span className="text-xs text-faint">—</span>;
 }
 
 export default function Reservas() {
@@ -75,6 +112,12 @@ export default function Reservas() {
       header: "Estado",
       enableSorting: false,
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
+    },
+    {
+      id: "actions",
+      header: "",
+      enableSorting: false,
+      cell: ({ row }) => <RowActions b={row.original} />,
     },
   ];
 
@@ -141,6 +184,11 @@ export default function Reservas() {
                         <dd className="mt-0.5 font-medium tabular-nums text-ink">{cop(b.priceTotal)}</dd>
                       </div>
                     </dl>
+                    {(b.status === "agendado" || b.status === "en_curso") && (
+                      <div className="mt-3 flex justify-end">
+                        <RowActions b={b} />
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>

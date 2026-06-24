@@ -98,6 +98,36 @@ export class BookingService {
     });
   }
 
+  /** Transiciones de estado permitidas. */
+  private static readonly NEXT: Record<string, string[]> = {
+    agendado: ["en_curso", "cancelado"],
+    en_curso: ["completado", "cancelado"],
+    completado: [],
+    cancelado: [],
+  };
+
+  /** Cambia el estado de una reserva validando la transición. Auditado. */
+  async transition(id: string, to: Booking["status"], actorId: string): Promise<Booking> {
+    const booking = await this.prisma.booking.findUnique({ where: { id } });
+    if (!booking) {
+      throw new NotFoundException("Reserva no encontrada");
+    }
+    if (!BookingService.NEXT[booking.status]?.includes(to)) {
+      throw new BadRequestException(`Transición no permitida: ${booking.status} → ${to}`);
+    }
+    const updated = await this.prisma.booking.update({ where: { id }, data: { status: to } });
+    await this.audit.record({
+      action: "booking.status",
+      outcome: "success",
+      actorId,
+      resourceType: "booking",
+      resourceId: id,
+      before: { status: booking.status },
+      after: { status: to },
+    });
+    return updated;
+  }
+
   async cancel(id: string, actorId: string): Promise<Booking> {
     const booking = await this.prisma.booking.findUnique({ where: { id } });
     if (!booking) {
