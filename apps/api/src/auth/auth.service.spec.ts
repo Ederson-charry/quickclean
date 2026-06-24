@@ -38,13 +38,14 @@ function deps(overrides: Overrides = {}) {
       revokeFamily: async () => {},
       ...overrides.tokens,
     },
+    auditor: { record: vi.fn(async () => ({})), ...overrides.auditor },
     prisma: { user: { update: async () => ({}) }, ...overrides.prisma },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any;
 }
 
 function build(d: ReturnType<typeof deps>): AuthService {
-  return new AuthService(d.users, d.password, d.lockout, d.tokens, d.prisma);
+  return new AuthService(d.users, d.password, d.lockout, d.tokens, d.prisma, d.auditor);
 }
 
 const cred = { email: "a@b.co", password: "x".repeat(12) };
@@ -74,6 +75,22 @@ describe("AuthService.login", () => {
     const svc = build(deps({ password: { verify: async () => true, isExpired: () => true } }));
     const r = await svc.login(cred, {});
     expect("mustChangePassword" in r && r.mustChangePassword).toBe(true);
+  });
+
+  it("registra auditoría auth.login/success en login exitoso", async () => {
+    const d = deps();
+    await build(d).login(cred, { ip: "1.2.3.4" });
+    expect(d.auditor.record).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "auth.login", outcome: "success", actorId: "u1" }),
+    );
+  });
+
+  it("registra auditoría auth.login/failure en password incorrecta", async () => {
+    const d = deps({ password: { verify: async () => false } });
+    await expect(build(d).login(cred, {})).rejects.toThrow();
+    expect(d.auditor.record).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "auth.login", outcome: "failure" }),
+    );
   });
 });
 
