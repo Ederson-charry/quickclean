@@ -11,6 +11,8 @@ export interface ServiceCategory {
   colorToken: string;
   active: boolean;
   sortOrder: number;
+  archivedAt: string | null;
+  createdAt: string;
 }
 
 export interface TariffRule {
@@ -62,6 +64,55 @@ export function useServiceCategories() {
   return useQuery({
     queryKey: ["catalogo"],
     queryFn: () => apiFetch<ServiceCategory[]>("/catalogo"),
+  });
+}
+
+export interface CreateCategoryInput {
+  slug: string;
+  name: string;
+  description?: string;
+  iconName: string;
+  colorToken: string;
+  sortOrder?: number;
+}
+
+/** Todas las categorías incl. archivadas (admin, requiere service.read). */
+export function useAllCategories(enabled: boolean) {
+  return useQuery({
+    queryKey: ["servicios"],
+    enabled,
+    queryFn: () => apiFetch<ServiceCategory[]>("/admin/servicios", { headers: authHeaders() }),
+  });
+}
+
+export function useCreateCategory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateCategoryInput) =>
+      apiFetch<ServiceCategory>("/admin/servicios", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify(input),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["servicios"] });
+      qc.invalidateQueries({ queryKey: ["catalogo"] });
+    },
+  });
+}
+
+export function useArchiveCategory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<ServiceCategory>(`/admin/servicios/${id}/archivar`, {
+        method: "POST",
+        headers: authHeaders(),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["servicios"] });
+      qc.invalidateQueries({ queryKey: ["catalogo"] });
+    },
   });
 }
 
