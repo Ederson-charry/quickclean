@@ -1,5 +1,5 @@
 import { Outlet, Link, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Users, UserRound, CreditCard, FileText, ShieldCheck, Menu, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, UserRound, CreditCard, FileText, ShieldCheck, Tag, Menu, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import {
@@ -30,6 +30,7 @@ const NAV: NavItem[] = [
   { to: "/admin/clientes", label: "Clientes", icon: UserRound, exact: false },
   { to: "/admin/pagos", label: "Pagos", icon: CreditCard, exact: false },
   { to: "/admin/facturacion", label: "Facturación", icon: FileText, exact: false },
+  { to: "/admin/tarifas", label: "Tarifas", icon: Tag, exact: false, perm: "tariff.read" },
   { to: "/admin/auditoria", label: "Auditoría", icon: ShieldCheck, exact: false, perm: "audit.read" },
 ];
 
