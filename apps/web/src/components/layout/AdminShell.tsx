@@ -16,19 +16,30 @@ import { useSession } from "@/stores/session";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
-const NAV = [
+type NavItem = {
+  to: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  exact: boolean;
+  perm?: string;
+};
+
+const NAV: NavItem[] = [
   { to: "/admin", label: "Indicadores", icon: LayoutDashboard, exact: true },
   { to: "/admin/quickers", label: "Quickers", icon: Users, exact: false },
   { to: "/admin/clientes", label: "Clientes", icon: UserRound, exact: false },
   { to: "/admin/pagos", label: "Pagos", icon: CreditCard, exact: false },
   { to: "/admin/facturacion", label: "Facturación", icon: FileText, exact: false },
-  { to: "/admin/auditoria", label: "Auditoría", icon: ShieldCheck, exact: false },
+  { to: "/admin/auditoria", label: "Auditoría", icon: ShieldCheck, exact: false, perm: "audit.read" },
 ];
 
 function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
+  const permissions = useSession((s) => s.permissions);
+  // En demo (sin permisos reales) se muestra todo; con sesión real se respeta el RBAC.
+  const items = NAV.filter((i) => !i.perm || permissions.length === 0 || permissions.includes(i.perm));
   return (
     <nav className="flex flex-col gap-1 p-4" aria-label="Navegación admin">
-      {NAV.map((item) => (
+      {items.map((item) => (
         <Link
           key={item.to}
           to={item.to}
