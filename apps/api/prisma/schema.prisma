@@ -163,9 +163,10 @@ model MfaFactor {
   userId      String
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   type        String // "totp" | "sms"
-  secret      String // cifrado en reposo (hardening posterior)
+  secret      String // cifrado en reposo (AES-256-GCM)
   confirmedAt DateTime?
   isDefault   Boolean   @default(false)
+  lastUsedStep BigInt?  // último paso TOTP consumido (anti-replay)
 
   @@index([userId])
 }
