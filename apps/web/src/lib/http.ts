@@ -7,8 +7,10 @@ export function apiUrl(path: string): string {
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(apiUrl(path), {
     credentials: "include",
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
     ...init,
+    // los headers van DESPUÉS de ...init para no perder el Content-Type
+    // cuando el caller pasa sus propios headers (ej. Authorization).
+    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
   });
   if (!res.ok) {
     throw new Error(`HTTP ${res.status}`);

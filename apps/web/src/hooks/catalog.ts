@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/http";
 import { useSession } from "@/stores/session";
 
@@ -75,6 +75,31 @@ export function useTariffs(categoryId: string | undefined, enabled: boolean) {
         `/admin/tarifas?categoryId=${categoryId}`,
         { headers: authHeaders() },
       ),
+  });
+}
+
+export interface PublishInput {
+  serviceCategoryId: string;
+  name: string;
+  effectiveFrom: string;
+  rules: { dimension: string; key: string; modifierType: string; value: number }[];
+  otp?: string;
+}
+
+/** Publica una nueva versión de tarifa (requiere tariff.assign; step-up 2FA si aplica). */
+export function usePublishTariff() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: PublishInput) =>
+      apiFetch<Tariff>("/admin/tarifas", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify(input),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tarifas"] });
+      qc.invalidateQueries({ queryKey: ["precio"] });
+    },
   });
 }
 

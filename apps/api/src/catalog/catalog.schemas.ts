@@ -22,6 +22,8 @@ export const PublishTariffInput = z.object({
   name: z.string().min(2),
   effectiveFrom: z.coerce.date(),
   rules: z.array(TariffRuleInput).min(1),
+  /** Código 2FA para step-up al publicar (sólo exigido si el usuario tiene 2FA). */
+  otp: z.string().length(6).optional(),
 });
 export type PublishTariffInput = z.infer<typeof PublishTariffInput>;
 

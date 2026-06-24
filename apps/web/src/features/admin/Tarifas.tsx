@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { Calculator, CalendarClock, ReceiptText, Tag } from "lucide-react";
+import { Calculator, CalendarClock, Plus, ReceiptText, Tag, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -13,6 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/States";
 import {
   type Tariff,
+  usePublishTariff,
   useServiceCategories,
   useTariffs,
   usePricePreview,
@@ -166,9 +177,247 @@ function Previewer({ categoryId }: { categoryId: string | undefined }) {
   );
 }
 
+// ─── Diálogo: publicar nueva versión ──────────────────────────────────────────
+const DIMENSION_OPTS = [
+  { v: "duration", l: "Duración (base $)" },
+  { v: "frequency", l: "Frecuencia (% desc.)" },
+  { v: "size", l: "Tamaño (×)" },
+  { v: "supplies", l: "Insumos ($)" },
+  { v: "platform_fee", l: "Comisión ($)" },
+  { v: "payout_pct", l: "Pago quicker (%)" },
+];
+const MODIFIER_OPTS = [
+  { v: "base", l: "base" },
+  { v: "percent", l: "%" },
+  { v: "multiplier", l: "×" },
+  { v: "flat", l: "fijo" },
+];
+
+interface EditRule {
+  dimension: string;
+  key: string;
+  modifierType: string;
+  value: string;
+}
+
+function defaultRules(active: Tariff | null | undefined): EditRule[] {
+  if (active && active.rules.length) {
+    return active.rules.map((r) => ({
+      dimension: r.dimension,
+      key: r.key,
+      modifierType: r.modifierType,
+      value: String(r.value),
+    }));
+  }
+  return [
+    { dimension: "duration", key: "4", modifierType: "base", value: "79900" },
+    { dimension: "frequency", key: "unica", modifierType: "percent", value: "0" },
+    { dimension: "size", key: "M", modifierType: "multiplier", value: "1.15" },
+    { dimension: "platform_fee", key: "", modifierType: "flat", value: "6900" },
+    { dimension: "payout_pct", key: "", modifierType: "percent", value: "0.7" },
+  ];
+}
+
+function localNow(): string {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+const publishSchema = z.object({
+  name: z.string().min(2),
+  effectiveFrom: z.string().min(1),
+  rules: z
+    .array(
+      z.object({
+        dimension: z.string().min(1),
+        key: z.string(),
+        modifierType: z.string().min(1),
+        value: z.coerce.number(),
+      }),
+    )
+    .min(1),
+  otp: z.string().optional(),
+});
+
+function PublishDialog({
+  categoryId,
+  active,
+  open,
+  onClose,
+}: {
+  categoryId: string;
+  active: Tariff | null | undefined;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const publish = usePublishTariff();
+  const [name, setName] = useState("");
+  const [effectiveFrom, setEffectiveFrom] = useState(localNow());
+  const [rules, setRules] = useState<EditRule[]>(defaultRules(active));
+  const [otp, setOtp] = useState("");
+
+  useEffect(() => {
+    if (open) {
+      setName("");
+      setEffectiveFrom(localNow());
+      setRules(defaultRules(active));
+      setOtp("");
+    }
+  }, [open, active]);
+
+  const setRule = (i: number, patch: Partial<EditRule>) =>
+    setRules((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+
+  const submit = () => {
+    const parsed = publishSchema.safeParse({ name, effectiveFrom, rules, otp });
+    if (!parsed.success) {
+      toast.error("Revisa el nombre, la vigencia y las reglas.");
+      return;
+    }
+    publish.mutate(
+      {
+        serviceCategoryId: categoryId,
+        name: parsed.data.name,
+        effectiveFrom: new Date(parsed.data.effectiveFrom).toISOString(),
+        rules: parsed.data.rules,
+        otp: parsed.data.otp || undefined,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Nueva versión de tarifa publicada");
+          onClose();
+        },
+        onError: () => toast.error("No se pudo publicar (permiso o 2FA requerido)"),
+      },
+    );
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="font-display">Nueva versión de tarifa</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="t-name" className="text-xs text-ink-2">
+                Nombre
+              </Label>
+              <Input id="t-name" placeholder="Tarifa 2026-Q4" value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="t-from" className="text-xs text-ink-2">
+                Vigente desde
+              </Label>
+              <Input id="t-from" type="datetime-local" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} />
+            </div>
+          </div>
+
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <Label className="text-xs text-ink-2">Reglas de precio</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setRules((rs) => [...rs, { dimension: "duration", key: "", modifierType: "base", value: "0" }])}
+              >
+                <Plus className="size-4" /> Regla
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {rules.map((r, i) => (
+                <div
+                  key={i}
+                  className="grid grid-cols-[1fr_auto] items-end gap-2 rounded-lg border border-line p-2 sm:grid-cols-[1.4fr_0.8fr_1fr_0.9fr_auto]"
+                >
+                  <Select value={r.dimension} onValueChange={(v) => setRule(i, { dimension: v ?? "duration" })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DIMENSION_OPTS.map((o) => (
+                        <SelectItem key={o.v} value={o.v}>
+                          {o.l}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input placeholder="clave" value={r.key} onChange={(e) => setRule(i, { key: e.target.value })} />
+                  <Select value={r.modifierType} onValueChange={(v) => setRule(i, { modifierType: v ?? "base" })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MODIFIER_OPTS.map((o) => (
+                        <SelectItem key={o.v} value={o.v}>
+                          {o.l}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="number"
+                    step="any"
+                    placeholder="valor"
+                    value={r.value}
+                    onChange={(e) => setRule(i, { value: e.target.value })}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Quitar regla"
+                    onClick={() => setRules((rs) => rs.filter((_, idx) => idx !== i))}
+                    disabled={rules.length <= 1}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="t-otp" className="text-xs text-ink-2">
+              Código 2FA (si está activo)
+            </Label>
+            <Input
+              id="t-otp"
+              inputMode="numeric"
+              maxLength={6}
+              placeholder="000000"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              className="max-w-[140px]"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 border-t border-line pt-3">
+            <Button type="button" variant="ghost" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              className="bg-brand-600 text-white hover:bg-brand-700"
+              onClick={submit}
+              disabled={publish.isPending}
+            >
+              {publish.isPending ? "Publicando…" : "Publicar versión"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Tarifa vigente + historial ───────────────────────────────────────────────
 function TariffPanel({ categoryId, enabled }: { categoryId: string | undefined; enabled: boolean }) {
   const { data, isLoading, isError, refetch } = useTariffs(categoryId, enabled);
+  const [showPublish, setShowPublish] = useState(false);
 
   if (!enabled) {
     return (
@@ -185,6 +434,24 @@ function TariffPanel({ categoryId, enabled }: { categoryId: string | undefined; 
 
   return (
     <Card title="Tarifa vigente e historial" icon={Tag}>
+      {categoryId && (
+        <div className="mb-3 flex justify-end">
+          <Button
+            type="button"
+            size="sm"
+            className="bg-brand-600 text-white hover:bg-brand-700"
+            onClick={() => setShowPublish(true)}
+          >
+            <Plus className="size-4" /> Nueva versión
+          </Button>
+          <PublishDialog
+            categoryId={categoryId}
+            active={active}
+            open={showPublish}
+            onClose={() => setShowPublish(false)}
+          />
+        </div>
+      )}
       {active ? (
         <div className="rounded-lg border border-success/30 bg-success/5 p-4">
           <div className="flex items-center justify-between gap-2">
