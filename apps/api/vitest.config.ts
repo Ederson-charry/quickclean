@@ -7,6 +7,7 @@ export default defineConfig({
     globals: true,
     environment: "node",
     include: ["src/**/*.spec.ts"],
+    setupFiles: ["./vitest.setup.ts"],
     pool: "forks",
     alias: {
       "@quickclean/shared": path.resolve(__dirname, "../../packages/shared/src/index.ts"),

@@ -7,6 +7,7 @@ export default defineConfig({
     globals: true,
     environment: "node",
     include: ["test/**/*.e2e-spec.ts"],
+    setupFiles: ["./vitest.setup.ts"],
     pool: "forks",
     testTimeout: 30_000,
     alias: {

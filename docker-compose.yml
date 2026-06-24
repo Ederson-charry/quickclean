@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16
+    container_name: quickclean-db
+    environment:
+      POSTGRES_USER: quickclean
+      POSTGRES_PASSWORD: localdev
+      POSTGRES_DB: quickclean
+    ports:
+      - "5544:5432"
+    volumes:
+      - quickclean_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quickclean"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  quickclean_pgdata:
