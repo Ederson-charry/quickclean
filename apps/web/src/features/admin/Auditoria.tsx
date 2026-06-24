@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Download,
   Eye,
   Loader2,
   RotateCw,
@@ -13,6 +14,7 @@ import {
   ShieldQuestion,
   XCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +38,7 @@ import {
   type AuditEvent,
   type AuditFilters,
   type AuditOutcome,
+  downloadAuditExport,
   useAuditLog,
   useAuditVerify,
 } from "@/hooks/audit";
@@ -287,11 +290,24 @@ export default function Auditoria() {
   const enabled = !!accessToken;
   const [filters, setFilters] = useState<AuditFilters>({ page: 1, pageSize: PAGE_SIZE });
   const [detail, setDetail] = useState<AuditEvent | null>(null);
+  const [exporting, setExporting] = useState<null | "csv" | "json">(null);
 
   const { data, isLoading, isError, refetch } = useAuditLog(filters, enabled);
 
   const applyFilters = (f: Partial<AuditFilters>) => setFilters((prev) => ({ ...prev, ...f, page: 1 }));
   const goPage = (page: number) => setFilters((prev) => ({ ...prev, page }));
+
+  const onExport = async (format: "csv" | "json") => {
+    setExporting(format);
+    try {
+      await downloadAuditExport(filters, format);
+      toast.success(`Bitácora exportada (${format.toUpperCase()})`);
+    } catch {
+      toast.error("No se pudo exportar la bitácora");
+    } finally {
+      setExporting(null);
+    }
+  };
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
@@ -381,6 +397,17 @@ export default function Auditoria() {
             </div>
           ) : (
             <>
+              {/* Barra de exportación (usa los filtros aplicados) */}
+              <div className="flex items-center justify-end gap-2">
+                <span className="mr-1 text-xs text-faint">Exportar:</span>
+                <Button variant="outline" size="sm" onClick={() => onExport("csv")} disabled={!!exporting}>
+                  <Download className="size-4" aria-hidden="true" /> CSV
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => onExport("json")} disabled={!!exporting}>
+                  <Download className="size-4" aria-hidden="true" /> JSON
+                </Button>
+              </div>
+
               {/* Escritorio: tabla densa */}
               <div className="hidden md:block">
                 <DataTable columns={columns} data={items} pageSize={Math.max(items.length, 1)} />
