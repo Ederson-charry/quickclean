@@ -6,3 +6,4 @@ export const cop = (n: number) =>
 
 export const fechaCorta = (iso: string) => format(new Date(iso), "d 'de' MMM", { locale: es });
 export const fechaLarga = (iso: string) => format(new Date(iso), "EEEE d 'de' MMMM", { locale: es });
+export const fechaHora = (iso: string) => format(new Date(iso), "d MMM yyyy, HH:mm:ss", { locale: es });
