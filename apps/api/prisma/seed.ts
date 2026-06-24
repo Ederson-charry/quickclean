@@ -53,7 +53,51 @@ async function main(): Promise<void> {
     create: { userId: user.id, roleId: admin.id },
   });
 
-  console.log("Seed listo. admin@quickclean.co / CambiaEsto-2026! (cambio forzado al primer login)");
+  // ── Catálogo de servicios + tarifa vigente ──────────────────────────────────
+  const CATEGORIES = [
+    { slug: "limpieza-general", name: "Limpieza general", iconName: "Sparkles", colorToken: "brand-600", sortOrder: 1 },
+    { slug: "limpieza-profunda", name: "Limpieza profunda", iconName: "Wind", colorToken: "brand-700", sortOrder: 2 },
+    { slug: "post-obra", name: "Post-obra", iconName: "HardHat", colorToken: "amber-600", sortOrder: 3 },
+  ];
+  for (const c of CATEGORIES) {
+    await prisma.serviceCategory.upsert({ where: { slug: c.slug }, update: {}, create: c });
+  }
+
+  const general = await prisma.serviceCategory.findUnique({ where: { slug: "limpieza-general" } });
+  if (general) {
+    const hasTariff = await prisma.tariff.findFirst({ where: { serviceCategoryId: general.id } });
+    if (!hasTariff) {
+      await prisma.tariff.create({
+        data: {
+          serviceCategoryId: general.id,
+          name: "Tarifa base 2026",
+          effectiveFrom: new Date(),
+          status: "active",
+          publishedBy: user.id,
+          publishedAt: new Date(),
+          rules: {
+            create: [
+              { dimension: "duration", key: "4", modifierType: "base", value: 79_900 },
+              { dimension: "duration", key: "6", modifierType: "base", value: 109_900 },
+              { dimension: "duration", key: "8", modifierType: "base", value: 139_900 },
+              { dimension: "frequency", key: "unica", modifierType: "percent", value: 0 },
+              { dimension: "frequency", key: "semanal", modifierType: "percent", value: 0.2 },
+              { dimension: "frequency", key: "quincenal", modifierType: "percent", value: 0.12 },
+              { dimension: "frequency", key: "mensual", modifierType: "percent", value: 0.08 },
+              { dimension: "size", key: "S", modifierType: "multiplier", value: 1 },
+              { dimension: "size", key: "M", modifierType: "multiplier", value: 1.15 },
+              { dimension: "size", key: "L", modifierType: "multiplier", value: 1.3 },
+              { dimension: "supplies", key: "", modifierType: "flat", value: 15_000 },
+              { dimension: "platform_fee", key: "", modifierType: "flat", value: 6_900 },
+              { dimension: "payout_pct", key: "", modifierType: "percent", value: 0.7 },
+            ],
+          },
+        },
+      });
+    }
+  }
+
+  console.log("Seed listo. admin@quickclean.co / CambiaEsto-2026! · catálogo + tarifa base sembrados");
 }
 
 main()
