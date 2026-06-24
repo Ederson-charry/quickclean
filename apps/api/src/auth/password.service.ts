@@ -2,6 +2,11 @@ import { BadRequestException, Injectable } from "@nestjs/common";
 import * as argon2 from "argon2";
 import { security } from "../config/security.config";
 
+// Hash argon2id real usado para gastar tiempo cuando el usuario no existe,
+// igualando la latencia del camino con usuario (anti-enumeración por timing).
+const DUMMY_HASH =
+  "$argon2id$v=19$m=65536,t=3,p=4$MTAWc0VSNeuo+fPeuhKy4g$wBKiTFqW0C7aHa9aOtHdtY6zIlv6cKNpXd4T4aq28vA";
+
 @Injectable()
 export class PasswordService {
   hash(plain: string): Promise<string> {
@@ -10,6 +15,11 @@ export class PasswordService {
 
   verify(hash: string, plain: string): Promise<boolean> {
     return argon2.verify(hash, plain);
+  }
+
+  /** Verifica contra un hash ficticio para no revelar (por tiempo) si el usuario existe. */
+  async burnTime(plain: string): Promise<void> {
+    await argon2.verify(DUMMY_HASH, plain).catch(() => false);
   }
 
   isExpired(passwordChangedAt: Date): boolean {

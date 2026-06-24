@@ -63,7 +63,7 @@ export class TokenService {
    * Rota un refresh token. Si el token presentado no existe o ya fue rotado
    * (revocado), se asume robo y se revoca toda la familia.
    */
-  async rotate(presented: string, permissions: string[] = []): Promise<IssuedTokens> {
+  async rotate(presented: string, permissions: string[]): Promise<IssuedTokens> {
     const sep = presented.indexOf(":");
     const familyId = sep === -1 ? "" : presented.slice(0, sep);
     const secret = sep === -1 ? "" : presented.slice(sep + 1);
@@ -72,7 +72,8 @@ export class TokenService {
       where: { familyId, refreshTokenHash: sha(secret) },
     });
 
-    if (!match || match.revokedAt) {
+    // inválido si no existe, ya fue rotado (revocado) o expiró: posible robo → revoca la familia
+    if (!match || match.revokedAt || match.expiresAt.getTime() <= Date.now()) {
       await this.revokeFamily(familyId);
       throw new UnauthorizedException("Refresh inválido");
     }

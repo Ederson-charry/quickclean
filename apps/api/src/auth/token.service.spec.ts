@@ -67,16 +67,29 @@ describe("TokenService", () => {
   it("rota refresh: el viejo deja de ser válido y rotarlo de nuevo revoca la familia", async () => {
     const svc = new TokenService(jwt, fakePrisma());
     const first = await svc.issue({ userId: "u1", permissions: [] });
-    const rotated = await svc.rotate(first.refreshToken);
+    const rotated = await svc.rotate(first.refreshToken, []);
     expect(rotated.refreshToken).not.toEqual(first.refreshToken);
     // reúso del token viejo → detección de robo
-    await expect(svc.rotate(first.refreshToken)).rejects.toThrow();
+    await expect(svc.rotate(first.refreshToken, [])).rejects.toThrow();
     // y tras la detección, el token rotado también queda revocado (familia revocada)
-    await expect(svc.rotate(rotated.refreshToken)).rejects.toThrow();
+    await expect(svc.rotate(rotated.refreshToken, [])).rejects.toThrow();
   });
 
   it("rotar una familia inexistente lanza Unauthorized", async () => {
     const svc = new TokenService(jwt, fakePrisma());
-    await expect(svc.rotate("no-existe:secreto")).rejects.toThrow();
+    await expect(svc.rotate("no-existe:secreto", [])).rejects.toThrow();
+  });
+
+  it("un refresh expirado se rechaza (no rota para siempre)", async () => {
+    const prisma = fakePrisma();
+    const svc = new TokenService(jwt, prisma);
+    const first = await svc.issue({ userId: "u1", permissions: [] });
+    const familyId = first.refreshToken.split(":")[0];
+    // fuerza la expiración de la sesión recién creada
+    await prisma.session.updateMany({
+      where: { familyId },
+      data: { expiresAt: new Date(Date.now() - 1000) } as never,
+    });
+    await expect(svc.rotate(first.refreshToken, [])).rejects.toThrow();
   });
 });

@@ -18,7 +18,13 @@ import { TurnstileService } from "./turnstile.service";
     PassportModule.register({ defaultStrategy: "jwt" }),
     JwtModule.registerAsync({
       inject: [ConfigService],
-      useFactory: (cfg: ConfigService) => ({ secret: cfg.get<string>("JWT_SECRET") }),
+      useFactory: (cfg: ConfigService) => {
+        const secret = cfg.get<string>("JWT_SECRET");
+        if (!secret) {
+          throw new Error("JWT_SECRET no está configurado");
+        }
+        return { secret };
+      },
     }),
   ],
   controllers: [AuthController],

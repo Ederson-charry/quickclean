@@ -26,6 +26,8 @@ export class AuthService {
       throw new UnauthorizedException("Credenciales inválidas");
     };
     if (!user || !user.credential) {
+      // gasta el mismo tiempo que una verificación real (anti-enumeración por timing)
+      await this.password.burnTime(input.password);
       return fail();
     }
 
