@@ -1,4 +1,5 @@
 import { Body, Controller, HttpCode, Post, Req, Res } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import { LoginInput } from "@quickclean/shared";
 import type { Request, Response } from "express";
 import { AuthService } from "./auth.service";
@@ -11,6 +12,8 @@ export class AuthController {
     private readonly turnstile: TurnstileService,
   ) {}
 
+  // Límite estricto: 5 intentos de login por minuto (sobre el global de 20).
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post("login")
   @HttpCode(200)
   async login(@Body() body: unknown, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
