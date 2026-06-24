@@ -1,5 +1,5 @@
 import { Outlet, Link, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Users, UserRound, CreditCard, FileText, Menu, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, UserRound, CreditCard, FileText, ShieldCheck, Menu, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import {
@@ -22,6 +22,7 @@ const NAV = [
   { to: "/admin/clientes", label: "Clientes", icon: UserRound, exact: false },
   { to: "/admin/pagos", label: "Pagos", icon: CreditCard, exact: false },
   { to: "/admin/facturacion", label: "Facturación", icon: FileText, exact: false },
+  { to: "/admin/auditoria", label: "Auditoría", icon: ShieldCheck, exact: false },
 ];
 
 function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
