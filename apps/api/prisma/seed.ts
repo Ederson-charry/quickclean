@@ -55,6 +55,22 @@ async function main(): Promise<void> {
     create: { userId: user.id, roleId: admin.id },
   });
 
+  // ── Usuario cliente de ejemplo (sin roles → rol derivado = client → /app) ───
+  const clientUser = await prisma.user.upsert({
+    where: { email: "cliente@quickclean.co" },
+    update: {},
+    create: { email: "cliente@quickclean.co", status: "active", emailVerifiedAt: new Date() },
+  });
+  await prisma.credential.upsert({
+    where: { userId: clientUser.id },
+    update: {},
+    create: {
+      userId: clientUser.id,
+      passwordHash: await argon2.hash("Cliente-2026!", { type: argon2.argon2id }),
+      mustChangePassword: false,
+    },
+  });
+
   // ── Catálogo de servicios + tarifa vigente ──────────────────────────────────
   const CATEGORIES = [
     { slug: "limpieza-general", name: "Limpieza general", iconName: "Sparkles", colorToken: "brand-600", sortOrder: 1 },

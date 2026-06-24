@@ -2,7 +2,14 @@ import { create } from "zustand";
 import type { Booking, Duration, Frequency } from "@/mocks/types";
 import { bookingTotal } from "@/lib/pricing";
 
-export type BookingDraft = Partial<Booking> & { duration: Duration; frequency: Frequency; supplies: boolean };
+export type BookingDraft = Partial<Booking> & {
+  duration: Duration;
+  frequency: Frequency;
+  supplies: boolean;
+  /** Categoría real del catálogo (cuando el backend está disponible). */
+  serviceCategoryId?: string;
+  serviceCategoryName?: string;
+};
 type Draft = BookingDraft;
 
 const initial: Draft = {
