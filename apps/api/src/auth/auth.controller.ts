@@ -37,7 +37,10 @@ export class AuthController {
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const presented = req.cookies?.[REFRESH_COOKIE] as string | undefined;
     try {
-      const tokens = await this.auth.refresh(presented);
+      const tokens = await this.auth.refresh(presented, {
+        ip: req.ip,
+        userAgent: req.headers["user-agent"],
+      });
       res.cookie(REFRESH_COOKIE, tokens.refreshToken, refreshCookieOptions);
       return { accessToken: tokens.accessToken };
     } catch (err) {
@@ -50,7 +53,10 @@ export class AuthController {
   @Post("logout")
   @HttpCode(204)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    await this.auth.logout(req.cookies?.[REFRESH_COOKIE] as string | undefined);
+    await this.auth.logout(req.cookies?.[REFRESH_COOKIE] as string | undefined, {
+      ip: req.ip,
+      userAgent: req.headers["user-agent"],
+    });
     res.clearCookie(REFRESH_COOKIE, refreshCookieOptions);
   }
 }
