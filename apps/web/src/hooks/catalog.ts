@@ -154,6 +154,63 @@ export function usePublishTariff() {
   });
 }
 
+export interface BookingResponse {
+  id: string;
+  priceTotal: number;
+  payout: number;
+  status: string;
+  tariffId: string;
+}
+
+export interface CreateReservationInput {
+  serviceCategoryId: string;
+  duration: number;
+  frequency: string;
+  size: string;
+  supplies: boolean;
+  scheduledAt: string;
+  address: string;
+  notes?: string;
+  pets?: boolean;
+}
+
+/** Crea una reserva real (POST /reservas, cliente autenticado). */
+export function useCreateReservation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateReservationInput) =>
+      apiFetch<BookingResponse>("/reservas", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify(input),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["reservas"] }),
+  });
+}
+
+/** Lista las reservas del cliente autenticado (GET /reservas). */
+export interface ClientBooking {
+  id: string;
+  serviceCategoryId: string;
+  duration: number;
+  frequency: string;
+  size: string;
+  supplies: boolean;
+  scheduledAt: string;
+  address: string;
+  priceTotal: number;
+  status: "agendado" | "en_curso" | "completado" | "cancelado";
+  category?: { name: string; slug: string; iconName: string };
+}
+
+export function useMyReservations(enabled: boolean) {
+  return useQuery({
+    queryKey: ["reservas"],
+    enabled,
+    queryFn: () => apiFetch<ClientBooking[]>("/reservas", { headers: authHeaders() }),
+  });
+}
+
 /** Previsualiza el precio con la tarifa vigente (endpoint público). */
 export function usePricePreview(input: PreviewInput | null) {
   return useQuery({

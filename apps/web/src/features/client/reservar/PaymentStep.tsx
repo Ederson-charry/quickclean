@@ -4,7 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCreateBooking } from "@/hooks/queries";
+import { useCreateReservation } from "@/hooks/catalog";
+import { mapFrequency, mapSize, useBookingPrice } from "@/hooks/bookingPrice";
 import { useBooking } from "@/stores/booking";
+import { useSession } from "@/stores/session";
 import { cop } from "@/lib/format";
 import { Loader2, CreditCard, Building2, Smartphone, Wallet } from "lucide-react";
 import type { Booking } from "@/mocks/types";
@@ -15,8 +18,11 @@ interface PaymentStepProps {
 }
 
 export function PaymentStep({ onSuccess }: PaymentStepProps) {
-  const { data, total } = useBooking();
+  const { data } = useBooking();
+  const price = useBookingPrice(data);
   const createBooking = useCreateBooking();
+  const createReservation = useCreateReservation();
+  const accessToken = useSession((s) => s.accessToken);
   const [paying, setPaying] = useState(false);
   const [method, setMethod] = useState<"tarjeta" | "pse" | "nequi" | "breb">("tarjeta");
 
@@ -28,22 +34,57 @@ export function PaymentStep({ onSuccess }: PaymentStepProps) {
 
   async function handlePay() {
     setPaying(true);
+    const date = data.date ?? new Date().toISOString().slice(0, 10);
+    const time = data.time ?? "08:00";
+    const address = data.address ?? "Sin dirección";
     try {
-      const draft = {
+      // Camino real: categoría del catálogo + sesión autenticada → POST /reservas
+      if (data.serviceCategoryId && accessToken) {
+        const real = await createReservation.mutateAsync({
+          serviceCategoryId: data.serviceCategoryId,
+          duration: data.duration,
+          frequency: mapFrequency(data.frequency),
+          size: mapSize(data.size),
+          supplies: data.supplies,
+          scheduledAt: new Date(`${date}T${time}:00`).toISOString(),
+          address,
+          notes: data.notes,
+          pets: data.pets ?? false,
+        });
+        toast.success("¡Reserva creada con éxito!");
+        onSuccess({
+          id: real.id,
+          serviceType: data.serviceType ?? "hogar",
+          size: data.size ?? "1-2",
+          frequency: data.frequency,
+          duration: data.duration,
+          supplies: data.supplies,
+          date,
+          time,
+          address,
+          notes: data.notes,
+          pets: data.pets ?? false,
+          total: real.priceTotal,
+          status: "agendado",
+          rated: false,
+        });
+        return;
+      }
+
+      // Camino demo (sin backend/sesión): mock
+      const booking = await createBooking.mutateAsync({
         serviceType: data.serviceType ?? "hogar",
         size: data.size ?? "1-2",
         frequency: data.frequency,
         duration: data.duration,
         supplies: data.supplies,
-        date: data.date ?? new Date().toISOString().slice(0, 10),
-        time: data.time ?? "08:00",
-        address: data.address ?? "Sin dirección",
+        date,
+        time,
+        address,
         notes: data.notes,
         pets: data.pets ?? false,
-        total: total(),
-      };
-
-      const booking = await createBooking.mutateAsync(draft);
+        total: price.total,
+      });
       toast.success("¡Pago procesado con éxito!");
       onSuccess(booking);
     } catch {
@@ -208,7 +249,7 @@ export function PaymentStep({ onSuccess }: PaymentStepProps) {
       <div className="border-t border-line pt-4 space-y-3">
         <div className="flex justify-between items-center">
           <span className="text-sm text-faint">Total a pagar</span>
-          <span className="text-lg font-bold text-brand-600">{cop(total())}</span>
+          <span className="text-lg font-bold text-brand-600">{cop(price.total)}</span>
         </div>
 
         <Button
@@ -222,7 +263,7 @@ export function PaymentStep({ onSuccess }: PaymentStepProps) {
               Procesando pago...
             </>
           ) : (
-            `Pagar ${cop(total())}`
+            `Pagar ${cop(price.total)}`
           )}
         </Button>
 

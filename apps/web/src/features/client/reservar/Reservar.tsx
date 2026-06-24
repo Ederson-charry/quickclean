@@ -75,6 +75,8 @@ export default function Reservar() {
             duration={data.duration}
             frequency={data.frequency}
             supplies={data.supplies}
+            size={data.size}
+            serviceCategoryId={data.serviceCategoryId}
           />
         </div>
       </div>

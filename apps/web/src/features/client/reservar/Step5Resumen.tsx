@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useBooking } from "@/stores/booking";
+import { useBookingPrice } from "@/hooks/bookingPrice";
 import { PriceSummary } from "@/components/shared/PriceSummary";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +28,8 @@ const FREQ_LABELS: Record<string, string> = {
 type View = "resumen" | "pago" | "confirmacion";
 
 export function Step5Resumen() {
-  const { data, total } = useBooking();
+  const { data } = useBooking();
+  const price = useBookingPrice(data);
   const [view, setView] = useState<View>("resumen");
   const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(null);
 
@@ -93,6 +95,8 @@ export function Step5Resumen() {
         duration={data.duration}
         frequency={data.frequency}
         supplies={data.supplies}
+        size={data.size}
+        serviceCategoryId={data.serviceCategoryId}
       />
 
       {/* Coupon field (decorative) */}
@@ -114,7 +118,7 @@ export function Step5Resumen() {
       <div className="rounded-xl bg-brand-50 border border-brand-100 p-4 space-y-3">
         <div className="flex justify-between items-center">
           <span className="font-semibold text-ink">Total</span>
-          <span className="text-2xl font-bold text-brand-600">{cop(total())}</span>
+          <span className="text-2xl font-bold text-brand-600">{cop(price.total)}</span>
         </div>
         <Button
           className="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold h-12 gap-2"

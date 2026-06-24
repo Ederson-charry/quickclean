@@ -1,15 +1,51 @@
 import { Link } from "@tanstack/react-router";
 import { buttonVariants } from "@/components/ui/button";
 import { useMyBookings } from "@/hooks/queries";
+import { type ClientBooking, useMyReservations } from "@/hooks/catalog";
 import { BookingCard } from "@/components/shared/BookingCard";
 import { LoadingState, EmptyState, ErrorState } from "@/components/shared/States";
+import type { Booking, Duration, Frequency, ServiceType } from "@/mocks/types";
+import { useSession } from "@/stores/session";
 import { Star } from "lucide-react";
 
+function slugToType(slug: string | undefined): ServiceType {
+  if (slug && (slug.includes("profund") || slug.includes("post-obra"))) return "profundo";
+  return "hogar";
+}
+
+// Mapea la reserva real del backend al shape que pinta BookingCard.
+function realToBooking(b: ClientBooking): Booking {
+  return {
+    id: b.id,
+    serviceType: slugToType(b.category?.slug),
+    size: "1-2",
+    frequency: (b.frequency === "unica" ? "unico" : b.frequency) as Frequency,
+    duration: b.duration as Duration,
+    supplies: b.supplies,
+    date: b.scheduledAt.slice(0, 10),
+    time: b.scheduledAt.slice(11, 16),
+    address: b.address,
+    pets: false,
+    total: b.priceTotal,
+    status: b.status,
+    rated: false,
+  };
+}
+
 export default function MisServicios() {
-  const { data: bookings, isLoading, isError, refetch } = useMyBookings();
+  const token = useSession((s) => s.accessToken);
+  const useReal = !!token;
+
+  const real = useMyReservations(useReal);
+  const mock = useMyBookings();
+
+  const isLoading = useReal ? real.isLoading : mock.isLoading;
+  const isError = useReal ? real.isError : mock.isError;
+  const refetch = useReal ? real.refetch : mock.refetch;
+  const bookings: Booking[] | undefined = useReal ? real.data?.map(realToBooking) : mock.data;
 
   if (isLoading) return <LoadingState rows={3} />;
-  if (isError) return <ErrorState onRetry={refetch} />;
+  if (isError) return <ErrorState onRetry={() => refetch()} />;
 
   if (!bookings || bookings.length === 0) {
     return (
@@ -30,14 +66,11 @@ export default function MisServicios() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-[var(--font-display)] text-2xl font-bold text-ink">
-        Mis servicios
-      </h1>
+      <h1 className="font-[var(--font-display)] text-2xl font-bold text-ink">Mis servicios</h1>
 
       <div className="space-y-3">
         {bookings.map((booking) => {
           const canRate = booking.status === "completado" && !booking.rated;
-
           return (
             <BookingCard
               key={booking.id}
@@ -47,7 +80,11 @@ export default function MisServicios() {
                   <Link
                     to="/app/servicios/$id/calificar"
                     params={{ id: booking.id }}
-                    className={buttonVariants({ size: "sm", variant: "outline", className: "border-brand-200 text-brand-600 hover:bg-brand-50 gap-1.5" })}
+                    className={buttonVariants({
+                      size: "sm",
+                      variant: "outline",
+                      className: "border-brand-200 text-brand-600 hover:bg-brand-50 gap-1.5",
+                    })}
                   >
                     <Star className="h-3.5 w-3.5" />
                     Calificar
