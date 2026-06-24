@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  active
+  locked
+  inactive
+  suspended
+  pending_verification
+}
+
+model User {
+  id               String     @id @default(uuid())
+  email            String     @unique
+  phone            String?
+  status           UserStatus @default(pending_verification)
+  emailVerifiedAt  DateTime?
+  phoneVerifiedAt  DateTime?
+  lastActivityAt   DateTime   @default(now())
+  failedLoginCount Int        @default(0)
+  lockedUntil      DateTime?
+  createdAt        DateTime   @default(now())
+
+  credential      Credential?
+  passwordHistory PasswordHistory[]
+  sessions        Session[]
+  mfaFactors      MfaFactor[]
+  recoveryCodes   RecoveryCode[]
+  roles           UserRole[]
+}
+
+model Credential {
+  userId             String   @id
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  passwordHash       String
+  passwordChangedAt  DateTime @default(now())
+  mustChangePassword Boolean  @default(false)
+}
+
+model PasswordHistory {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Session {
+  id               String    @id @default(uuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash String
+  familyId         String
+  ip               String?
+  userAgent        String?
+  createdAt        DateTime  @default(now())
+  expiresAt        DateTime
+  revokedAt        DateTime?
+
+  @@index([userId])
+  @@index([familyId])
+}
+
+model MfaFactor {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String // "totp" | "sms"
+  secret      String // cifrado en reposo (hardening posterior)
+  confirmedAt DateTime?
+  isDefault   Boolean   @default(false)
+
+  @@index([userId])
+}
+
+model RecoveryCode {
+  id       String    @id @default(uuid())
+  userId   String
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash String
+  usedAt   DateTime?
+
+  @@index([userId])
+}
+
+model Role {
+  id          String           @id @default(uuid())
+  key         String           @unique // super_admin|ops|finance|auditor|quicker|client
+  name        String
+  users       UserRole[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id    String           @id @default(uuid())
+  key   String           @unique // ej. service.update, tariff.assign, audit.read
+  roles RolePermission[]
+}
+
+model UserRole {
+  userId String
+  roleId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
