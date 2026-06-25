@@ -38,6 +38,7 @@ function withSuspense<T extends object>(Component: React.ComponentType<T>) {
 const Login = withSuspense(lazy(() => import("@/features/auth/Login")));
 const Registro = withSuspense(lazy(() => import("@/features/auth/Registro")));
 const ResetPassword = withSuspense(lazy(() => import("@/features/auth/ResetPassword")));
+const Privacidad = withSuspense(lazy(() => import("@/features/account/Privacidad")));
 
 // Client screens — lazy
 const Home = withSuspense(lazy(() => import("@/features/client/Home")));
@@ -101,6 +102,12 @@ const resetPasswordRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/restablecer",
   component: ResetPassword,
+});
+
+const privacidadRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/privacidad",
+  component: Privacidad,
 });
 
 // ─── Client layout ───────────────────────────────────────────────────────────
@@ -297,6 +304,7 @@ const routeTree = rootRoute.addChildren([
   loginRoute,
   registroRoute,
   resetPasswordRoute,
+  privacidadRoute,
   clientLayoutRoute.addChildren([
     clientHomeRoute,
     clientReservarRoute,

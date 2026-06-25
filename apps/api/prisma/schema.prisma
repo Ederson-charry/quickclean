@@ -322,6 +322,8 @@ model User {
   failedLoginCount Int        @default(0)
   lockedUntil      DateTime?
   createdAt        DateTime   @default(now())
+  /// Marca de supresión (Ley 1581): PII anonimizada, registros con retención legal conservados.
+  deletedAt        DateTime?
 
   credential      Credential?
   passwordHistory PasswordHistory[]
@@ -330,6 +332,7 @@ model User {
   recoveryCodes   RecoveryCode[]
   resetTokens     PasswordResetToken[]
   notifications   Notification[]
+  consents        Consent[]
   roles           UserRole[]
   bookingsAsClient  Booking[] @relation("BookingClient")
   bookingsAsQuicker Booking[] @relation("BookingQuicker")
@@ -347,6 +350,20 @@ model PasswordResetToken {
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+/// Consentimiento de tratamiento de datos (Habeas Data, Ley 1581). Registro de la
+/// aceptación de una versión de la política; se puede retirar (withdrawnAt).
+model Consent {
+  id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  policyVersion String
+  acceptedAt    DateTime  @default(now())
+  ip            String?
+  withdrawnAt   DateTime?
 
   @@index([userId])
 }

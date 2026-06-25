@@ -134,6 +134,13 @@ export function AdminShell() {
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
+                      onClick={() => navigate({ to: "/privacidad" })}
+                      className="cursor-pointer"
+                    >
+                      <ShieldCheck className="mr-2 h-4 w-4" />
+                      Privacidad y datos
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
                       onClick={handleLogout}
                       className="text-danger focus:text-danger focus:bg-danger/10 cursor-pointer"
                     >
