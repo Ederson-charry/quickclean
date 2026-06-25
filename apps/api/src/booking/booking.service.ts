@@ -86,6 +86,15 @@ export class BookingService {
     });
   }
 
+  /** Reservas activas asignadas a un quicker (su panel "Hoy"). */
+  listForQuicker(quickerUserId: string) {
+    return this.prisma.booking.findMany({
+      where: { quickerId: quickerUserId, status: { in: ["agendado", "en_curso"] } },
+      orderBy: { scheduledAt: "asc" },
+      include: { category: { select: { name: true } }, client: { select: { email: true } } },
+    });
+  }
+
   listAll(filter: { status?: string }) {
     return this.prisma.booking.findMany({
       where: filter.status ? { status: filter.status as Booking["status"] } : {},
