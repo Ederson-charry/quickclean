@@ -91,15 +91,24 @@ function AssignDialog({ booking, onClose }: { booking: BoardBooking | null; onCl
                     key={c.quickerId}
                     className={cn(
                       "rounded-lg border p-3",
-                      i === 0 ? "border-brand-300 bg-brand-50/40" : "border-line",
+                      !c.eligible
+                        ? "border-line bg-bg/40 opacity-70"
+                        : i === 0
+                        ? "border-brand-300 bg-brand-50/40"
+                        : "border-line",
                     )}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <span className="font-medium text-ink">{c.name}</span>
-                          {i === 0 && (
+                          {c.eligible && i === 0 && (
                             <Badge className="bg-brand-100 text-brand-700">Sugerido</Badge>
+                          )}
+                          {!c.eligible && (
+                            <Badge className="bg-danger/10 text-danger">
+                              No elegible{c.eligibilityReason ? ` · ${c.eligibilityReason}` : ""}
+                            </Badge>
                           )}
                         </div>
                         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-2">
@@ -127,12 +136,12 @@ function AssignDialog({ booking, onClose }: { booking: BoardBooking | null; onCl
                         <span className="font-mono text-xs tabular-nums text-faint">{c.score}</span>
                         <Button
                           size="sm"
-                          variant={i === 0 ? "default" : "outline"}
-                          className={i === 0 ? "bg-brand-600 text-white hover:bg-brand-700" : ""}
+                          variant={c.eligible && i === 0 ? "default" : "outline"}
+                          className={c.eligible && i === 0 ? "bg-brand-600 text-white hover:bg-brand-700" : ""}
                           onClick={() => doAssign(c.quickerId, c.name)}
-                          disabled={assign.isPending}
+                          disabled={assign.isPending || !c.eligible}
                         >
-                          {i === 0 ? "Confirmar" : "Asignar"}
+                          {!c.eligible ? "Bloqueado" : i === 0 ? "Confirmar" : "Asignar"}
                         </Button>
                       </div>
                     </div>

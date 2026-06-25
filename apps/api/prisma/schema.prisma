@@ -27,6 +27,43 @@ enum BookingStatus {
   cancelado
 }
 
+enum EngagementType {
+  contractor // prestación de servicios
+  employee // contrato laboral directo
+}
+
+/// Perfil del cliente. `empresa` exige contratación directa (solidaridad laboral, §6).
+model Client {
+  id                 String         @id @default(uuid())
+  userId             String         @unique
+  user               User           @relation("UserClient", fields: [userId], references: [id], onDelete: Cascade)
+  name               String
+  kind               String         @default("persona") // persona | empresa
+  requiresDirectHire Boolean        @default(false)
+  createdAt          DateTime       @default(now())
+  contracts          WorkContract[]
+}
+
+/// Relación de trabajo quicker↔cliente (o pool si clientId null). El régimen
+/// depende de la relación con el cliente, no solo del quicker (§6.1).
+model WorkContract {
+  id             String         @id @default(uuid())
+  quickerId      String
+  quicker        Quicker        @relation(fields: [quickerId], references: [id], onDelete: Cascade)
+  clientId       String?
+  client         Client?        @relation(fields: [clientId], references: [id])
+  engagementType EngagementType
+  position       String?
+  contractKind   String         @default("prestacion") // prestacion | fijo | indefinido
+  status         String         @default("activo") // activo | finalizado
+  startDate      DateTime       @default(now())
+  endDate        DateTime?
+  createdAt      DateTime       @default(now())
+
+  @@index([quickerId])
+  @@index([clientId])
+}
+
 /// Perfil operativo del quicker (vinculado a un User con rol quicker).
 model Quicker {
   id          String              @id @default(uuid())
@@ -40,6 +77,7 @@ model Quicker {
   skills      QuickerSkill[]
   assignments ServiceAssignment[]
   payouts     Payout[]
+  contracts   WorkContract[]
 
   @@index([active])
 }
@@ -236,6 +274,7 @@ model User {
   bookingsAsClient  Booking[] @relation("BookingClient")
   bookingsAsQuicker Booking[] @relation("BookingQuicker")
   quickerProfile    Quicker?  @relation("UserQuicker")
+  clientProfile     Client?   @relation("UserClient")
 }
 
 model Credential {

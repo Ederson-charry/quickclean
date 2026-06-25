@@ -89,4 +89,44 @@ describe("AssignmentService (integración) — ranking + asignación", () => {
     const assignment = await prisma.serviceAssignment.findUnique({ where: { bookingId } });
     expect(assignment?.quickerId).toBe(plainQuickerId);
   });
+
+  it("regla empresa→empleado: solo el quicker con contrato laboral es elegible", async () => {
+    // cliente empresa que exige contratación directa
+    const empUser = await prisma.user.create({ data: { email: `emp-${Date.now()}@x.co`, status: "active" } });
+    const empClient = await prisma.client.create({
+      data: { userId: empUser.id, name: "Empresa X", kind: "empresa", requiresDirectHire: true },
+    });
+    const empBooking = await prisma.booking.create({
+      data: {
+        clientId: empUser.id, serviceCategoryId: categoryId, tariffId,
+        duration: 4, frequency: "unica", size: "S", supplies: false,
+        scheduledAt: new Date(Date.now() + 2 * 86_400_000), address: "Calle Empresa",
+        priceLabor: 80_000, priceTotal: 86_900, payout: 56_000, status: "agendado",
+      },
+    });
+    // solo el skilled tiene contrato laboral con la empresa
+    await prisma.workContract.create({
+      data: { quickerId: skilledQuickerId, clientId: empClient.id, engagementType: "employee", status: "activo" },
+    });
+
+    const ranked = await svc.rankCandidates(empBooking.id);
+    const skilled = ranked.find((c) => c.quickerId === skilledQuickerId)!;
+    const plain = ranked.find((c) => c.quickerId === plainQuickerId)!;
+    expect(skilled.eligible).toBe(true);
+    expect(plain.eligible).toBe(false);
+    // elegibles primero
+    expect(ranked[0].quickerId).toBe(skilledQuickerId);
+    // asignar un no-elegible debe fallar
+    await expect(svc.assign(empBooking.id, plainQuickerId, clientId)).rejects.toThrow();
+    // asignar al elegible funciona
+    const ok = await svc.assign(empBooking.id, skilledQuickerId, clientId);
+    expect(ok.quickerId).toBe(skilledQuickerId);
+
+    // limpieza local
+    await prisma.serviceAssignment.deleteMany({ where: { bookingId: empBooking.id } });
+    await prisma.booking.delete({ where: { id: empBooking.id } });
+    await prisma.workContract.deleteMany({ where: { clientId: empClient.id } });
+    await prisma.client.delete({ where: { id: empClient.id } });
+    await prisma.user.delete({ where: { id: empUser.id } });
+  });
 });

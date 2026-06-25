@@ -167,7 +167,59 @@ async function main(): Promise<void> {
     }
   }
 
-  console.log("Seed listo. admin@quickclean.co · catálogo + tarifa + 3 quickers con skills sembrados");
+  // ── Vinculación laboral (clientes empresa/persona + contratos) ──────────────
+  // cliente@quickclean.co = persona
+  await prisma.client.upsert({
+    where: { userId: clientUser.id },
+    update: {},
+    create: { userId: clientUser.id, name: "Laura Gómez", kind: "persona", requiresDirectHire: false },
+  });
+
+  // empresa@quickclean.co = empresa (exige contratación directa)
+  const empUser = await prisma.user.upsert({
+    where: { email: "empresa@quickclean.co" },
+    update: {},
+    create: { email: "empresa@quickclean.co", status: "active", emailVerifiedAt: new Date() },
+  });
+  await prisma.credential.upsert({
+    where: { userId: empUser.id },
+    update: {},
+    create: {
+      userId: empUser.id,
+      passwordHash: await argon2.hash("Empresa-2026!", { type: argon2.argon2id }),
+      mustChangePassword: false,
+    },
+  });
+  const empresaClient = await prisma.client.upsert({
+    where: { userId: empUser.id },
+    update: { kind: "empresa", requiresDirectHire: true },
+    create: { userId: empUser.id, name: "Oficinas Andinas SAS", kind: "empresa", requiresDirectHire: true },
+  });
+
+  // Carolina tiene contrato laboral (employee) con la empresa → es la única idónea
+  const carolinaUser = await prisma.user.findUnique({ where: { email: "carolina@quickclean.co" } });
+  const carolinaQuicker = carolinaUser
+    ? await prisma.quicker.findUnique({ where: { userId: carolinaUser.id } })
+    : null;
+  if (carolinaQuicker) {
+    const existing = await prisma.workContract.findFirst({
+      where: { quickerId: carolinaQuicker.id, clientId: empresaClient.id, engagementType: "employee" },
+    });
+    if (!existing) {
+      await prisma.workContract.create({
+        data: {
+          quickerId: carolinaQuicker.id,
+          clientId: empresaClient.id,
+          engagementType: "employee",
+          position: "Operaria de aseo",
+          contractKind: "indefinido",
+          status: "activo",
+        },
+      });
+    }
+  }
+
+  console.log("Seed listo. admin/cliente/empresa + catálogo + tarifa + 3 quickers (Carolina con contrato laboral empresa)");
 }
 
 main()

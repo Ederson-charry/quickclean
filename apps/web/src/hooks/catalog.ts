@@ -447,6 +447,8 @@ export interface AssignmentCandidate {
   zoneMatch: boolean;
   clash: boolean;
   score: number;
+  eligible: boolean;
+  eligibilityReason?: string;
 }
 
 export interface BoardBooking {
