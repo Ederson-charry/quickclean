@@ -5,13 +5,22 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAssignment, useFinishAssignment } from "@/hooks/queries";
+import { type QuickerBooking, useQuickerBookings, useQuickerTransition } from "@/hooks/catalog";
 import { MapView } from "@/components/shared/MapView";
-import { LoadingState, ErrorState } from "@/components/shared/States";
+import { LoadingState, ErrorState, EmptyState } from "@/components/shared/States";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { cop } from "@/lib/format";
+import { cop, fechaHora } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useSession } from "@/stores/session";
+
+// Valor estable (no aleatorio) derivado del id para la vista de mapa.
+function seedFrom(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return h;
+}
 
 const STATUS_LABEL: Record<string, string> = {
   proximo: "Próximo",
@@ -25,7 +34,7 @@ const STATUS_CLASS: Record<string, string> = {
   completado: "bg-line text-ink-2",
 };
 
-export default function DetalleServicio() {
+function MockDetalle() {
   const { id = "" } = useParams({ strict: false }) as { id?: string };
   const navigate = useNavigate();
   const { data: assignment, isLoading, isError, refetch } = useAssignment(id);
@@ -182,4 +191,122 @@ export default function DetalleServicio() {
       )}
     </div>
   );
+}
+
+// ── Detalle real (reserva asignada al quicker) ──────────────────────────────────
+const REAL_STATUS: Record<string, { label: string; className: string }> = {
+  agendado: { label: "Agendado", className: "border-brand-300 text-brand-600" },
+  en_curso: { label: "En curso", className: "bg-success text-white" },
+  completado: { label: "Completado", className: "bg-line text-ink-2" },
+  cancelado: { label: "Cancelado", className: "bg-danger/10 text-danger" },
+};
+
+function RealDetalle() {
+  const { id = "" } = useParams({ strict: false }) as { id?: string };
+  const navigate = useNavigate();
+  const { data, isLoading, isError, refetch } = useQuickerBookings(true);
+  const transition = useQuickerTransition();
+  const booking: QuickerBooking | undefined = data?.find((b) => b.id === id);
+
+  if (isLoading) return <LoadingState rows={4} />;
+  if (isError) return <ErrorState onRetry={() => refetch()} />;
+  if (!booking) {
+    return (
+      <div className="rounded-xl border border-line bg-surface">
+        <EmptyState title="Servicio no encontrado" hint="Esta reserva ya no está disponible." />
+      </div>
+    );
+  }
+
+  const seed = seedFrom(booking.id);
+  const status = REAL_STATUS[booking.status] ?? REAL_STATUS.agendado;
+
+  const act = (next: "en_curso" | "completado", label: string) =>
+    transition.mutate(
+      { id: booking.id, status: next },
+      {
+        onSuccess: () => {
+          toast.success(label, next === "completado" ? { description: `${cop(booking.payout)} a tu balance.` } : undefined);
+          if (next === "completado") setTimeout(() => navigate({ to: "/pro" }), 1400);
+        },
+        onError: () => toast.error("No se pudo actualizar el servicio"),
+      },
+    );
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-bold text-ink">{booking.category?.name ?? "Servicio"}</h1>
+          <p className="mt-0.5 text-sm text-faint">{fechaHora(booking.scheduledAt)} · {booking.duration}h</p>
+        </div>
+        <Badge variant="outline" className={cn("shrink-0 text-xs", status.className)}>{status.label}</Badge>
+      </div>
+
+      <MapView minutes={8 + (seed % 6)} km={parseFloat((1 + (seed % 20) / 10).toFixed(1))} address={booking.address} />
+
+      <div className="rounded-xl border border-line bg-surface p-4">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-2">Cliente</h2>
+        <div className="flex items-center gap-4">
+          <Avatar className="h-12 w-12">
+            <AvatarFallback className="bg-brand-100 font-semibold text-brand-700">
+              {(booking.client?.email ?? "C").slice(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-semibold text-ink">{booking.client?.email ?? "Cliente"}</p>
+          </div>
+        </div>
+        <div className="mt-3 flex items-start gap-2 rounded-lg bg-bg p-3 text-sm">
+          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
+          <span className="text-ink-2">{booking.address}</span>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-line bg-surface p-4">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-2">Resumen del servicio</h2>
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between text-ink-2">
+            <span className="flex items-center gap-1.5"><Clock className="h-4 w-4 text-faint" /> Duración</span>
+            <span className="font-medium">{booking.duration} horas</span>
+          </div>
+          <div className="h-px bg-line" />
+          <div className="flex justify-between">
+            <span className="font-semibold text-ink">Tu pago</span>
+            <span className="text-lg font-bold text-success">{cop(booking.payout)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-start gap-3 rounded-xl border border-warning/40 bg-warning/5 p-4">
+        <Camera className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
+        <div className="text-sm">
+          <p className="font-semibold text-ink">Recordatorio</p>
+          <p className="mt-0.5 text-ink-2">Toma una foto antes y otra al finalizar para registrar el estado del espacio.</p>
+        </div>
+      </div>
+
+      {booking.status === "agendado" && (
+        <Button className="h-12 w-full bg-brand-600 text-base font-semibold text-white hover:bg-brand-700" disabled={transition.isPending} onClick={() => act("en_curso", "Servicio iniciado")}>
+          {transition.isPending ? "Iniciando..." : "Iniciar servicio"}
+        </Button>
+      )}
+      {booking.status === "en_curso" && (
+        <Button className="h-12 w-full bg-success text-base font-semibold text-white hover:bg-success/90" disabled={transition.isPending} onClick={() => act("completado", "¡Servicio finalizado!")}>
+          {transition.isPending ? "Finalizando..." : "Finalizar servicio"}
+        </Button>
+      )}
+      {(booking.status === "completado" || booking.status === "cancelado") && (
+        <div className="flex items-center justify-center gap-2 rounded-xl bg-success/10 p-4 text-success">
+          <CheckCircle2 className="h-5 w-5" />
+          <span className="font-semibold">{booking.status === "completado" ? "Servicio completado" : "Servicio cancelado"}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function DetalleServicio() {
+  const useReal = !!useSession((s) => s.accessToken);
+  return useReal ? <RealDetalle /> : <MockDetalle />;
 }
