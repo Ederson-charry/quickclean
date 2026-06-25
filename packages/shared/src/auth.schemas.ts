@@ -13,3 +13,11 @@ export const ChangePasswordInput = z.object({
   newPassword: z.string().min(12),
 });
 export type ChangePasswordInput = z.infer<typeof ChangePasswordInput>;
+
+/** Cambio de contraseña forzado (primer ingreso): sin sesión, identifica por email. */
+export const ForcedPasswordChangeInput = z.object({
+  email: z.email(),
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(12),
+});
+export type ForcedPasswordChangeInput = z.infer<typeof ForcedPasswordChangeInput>;

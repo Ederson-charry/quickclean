@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -34,8 +35,9 @@ const ROLE_HOME: Record<Role, string> = {
 
 export default function Login() {
   const { login } = useSession();
-  const { login: apiLogin } = useAuth();
+  const { login: apiLogin, changePassword } = useAuth();
   const navigate = useNavigate();
+  const [forceChange, setForceChange] = useState<{ email: string; current: string } | null>(null);
 
   const {
     register,
@@ -47,7 +49,8 @@ export default function Login() {
     try {
       const res = await apiLogin(data);
       if ("mustChangePassword" in res) {
-        toast.info("Debes cambiar tu contraseña antes de continuar.");
+        toast.info("Debes crear una contraseña nueva para continuar.");
+        setForceChange({ email: data.email, current: data.password });
         return;
       }
       // el rol y los permisos reales ya quedaron en la sesión vía /auth/me
@@ -115,6 +118,22 @@ export default function Login() {
             </p>
           </div>
 
+          {/* Cambio de contraseña forzado (primer ingreso) */}
+          {forceChange ? (
+            <div className="animate-rise" style={{ animationDelay: "0.2s" }}>
+              <ForceChangeForm
+                email={forceChange.email}
+                current={forceChange.current}
+                onDone={(home) => {
+                  toast.success("Contraseña actualizada");
+                  navigate({ to: home });
+                }}
+                onCancel={() => setForceChange(null)}
+                changePassword={changePassword}
+              />
+            </div>
+          ) : (
+          <>
           {/* Form — stagger delay 3 */}
           <div className="animate-rise" style={{ animationDelay: "0.35s" }}>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -214,9 +233,105 @@ export default function Login() {
               ))}
             </div>
           </div>
+          </>
+          )}
 
         </div>
       </div>
     </div>
+  );
+}
+
+// ── Formulario de cambio de contraseña forzado (primer ingreso) ─────────────────
+const changeSchema = z
+  .object({
+    newPassword: z.string().min(12, "Mínimo 12 caracteres"),
+    confirm: z.string().min(1, "Confirma la contraseña"),
+  })
+  .refine((d) => d.newPassword === d.confirm, { message: "Las contraseñas no coinciden", path: ["confirm"] });
+type ChangeForm = z.infer<typeof changeSchema>;
+
+function ForceChangeForm({
+  email,
+  current,
+  onDone,
+  onCancel,
+  changePassword,
+}: {
+  email: string;
+  current: string;
+  onDone: (home: string) => void;
+  onCancel: () => void;
+  changePassword: (input: { email: string; currentPassword: string; newPassword: string }) => Promise<{ home: string }>;
+}) {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<ChangeForm>({ resolver: zodResolver(changeSchema) });
+
+  const onSubmit = async (data: ChangeForm) => {
+    try {
+      const { home } = await changePassword({ email, currentPassword: current, newPassword: data.newPassword });
+      onDone(home);
+    } catch {
+      toast.error("No se pudo cambiar la contraseña. Verifica la política e inténtalo de nuevo.");
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <p className="text-sm text-white/80">
+        Tu cuenta requiere una contraseña nueva. Crea una de al menos 12 caracteres para{" "}
+        <span className="font-semibold text-white">{email}</span>.
+      </p>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="newPassword" className="text-white/90 text-sm font-medium">
+          Nueva contraseña
+        </Label>
+        <Input
+          id="newPassword"
+          type="password"
+          placeholder="••••••••••••"
+          autoComplete="new-password"
+          {...register("newPassword")}
+          aria-invalid={!!errors.newPassword}
+          className="bg-white/15 border-white/25 text-white placeholder:text-white/45 focus:border-white/60 focus:bg-white/20"
+        />
+        {errors.newPassword && <p className="text-xs text-red-300">{errors.newPassword.message}</p>}
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="confirm" className="text-white/90 text-sm font-medium">
+          Confirmar contraseña
+        </Label>
+        <Input
+          id="confirm"
+          type="password"
+          placeholder="••••••••••••"
+          autoComplete="new-password"
+          {...register("confirm")}
+          aria-invalid={!!errors.confirm}
+          className="bg-white/15 border-white/25 text-white placeholder:text-white/45 focus:border-white/60 focus:bg-white/20"
+        />
+        {errors.confirm && <p className="text-xs text-red-300">{errors.confirm.message}</p>}
+      </div>
+
+      <Button
+        type="submit"
+        className="w-full bg-white !text-brand-700 font-semibold hover:bg-white/90 mt-1"
+        disabled={isSubmitting}
+      >
+        {isSubmitting ? "Guardando..." : "Crear contraseña e ingresar"}
+      </Button>
+      <button
+        type="button"
+        onClick={onCancel}
+        className="w-full text-center text-sm text-white/70 underline underline-offset-2 hover:text-white min-h-[40px]"
+      >
+        Volver
+      </button>
+    </form>
   );
 }

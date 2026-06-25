@@ -1,233 +1,273 @@
-import { useState, useMemo } from "react";
-import { useQuickers } from "@/hooks/queries";
-import { LoadingState, ErrorState, EmptyState } from "@/components/shared/States";
-import { DataTable } from "@/components/shared/DataTable";
-import { RatingStars } from "@/components/shared/RatingStars";
-import { buttonVariants } from "@/components/ui/button";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Check, KeyRound, MapPin, Star, UserPlus } from "lucide-react";
+import { toast } from "sonner";
+import {
+  type AdminQuicker,
+  useAdminQuickers,
+  useAllCategories,
+  useCreateQuicker,
+  useUpdateQuicker,
+} from "@/hooks/catalog";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Link } from "@tanstack/react-router";
-import { Search, Plus, Eye } from "lucide-react";
-import { cop } from "@/lib/format";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { EmptyState, ErrorState, LoadingState } from "@/components/shared/States";
 import { cn } from "@/lib/utils";
-import type { Quicker } from "@/mocks/types";
-import type { ColumnDef } from "@tanstack/react-table";
+import { useSession } from "@/stores/session";
 
-const STATUS_LABELS: Record<string, string> = {
-  activo: "Activo",
-  inactivo: "Inactivo",
-  incapacidad: "Incapacidad",
-};
+const schema = z.object({
+  email: z.string().email("Correo inválido"),
+  name: z.string().min(2, "Nombre requerido"),
+  zone: z.string().min(2, "Zona requerida"),
+});
+type FormValues = z.infer<typeof schema>;
 
-const STATUS_VARIANT: Record<string, "default" | "outline" | "destructive" | "secondary"> = {
-  activo: "default",
-  inactivo: "outline",
-  incapacidad: "secondary",
-};
-
-const STATUS_FILTERS = ["todos", "activo", "inactivo", "incapacidad"] as const;
-
-const columns: ColumnDef<Quicker, unknown>[] = [
-  {
-    id: "quicker",
-    header: "Quicker",
-    accessorFn: (row) => row.name,
-    enableSorting: true,
-    cell: ({ row }) => {
-      const q = row.original;
-      const initials = q.name.split(" ").map((n) => n[0]).slice(0, 2).join("");
-      return (
-        <div className="flex items-center gap-3 min-w-[160px]">
-          <Avatar className="h-9 w-9 shrink-0">
-            <AvatarFallback className="bg-brand-100 text-brand-700 text-xs font-semibold">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-          <div className="min-w-0">
-            <p className="truncate font-medium text-ink text-sm">{q.name}</p>
-            <p className="truncate text-xs text-ink-2">{q.doc}</p>
-          </div>
-        </div>
-      );
-    },
-  },
-  {
-    accessorKey: "zone",
-    header: "Zona",
-    enableSorting: true,
-    cell: ({ getValue }) => (
-      <span className="text-sm text-ink-2">{getValue() as string}</span>
-    ),
-  },
-  {
-    accessorKey: "status",
-    header: "Estado",
-    enableSorting: true,
-    cell: ({ getValue }) => {
-      const status = getValue() as string;
-      return (
-        <Badge variant={STATUS_VARIANT[status] ?? "outline"}>
-          {STATUS_LABELS[status] ?? status}
-        </Badge>
-      );
-    },
-  },
-  {
-    accessorKey: "rating",
-    header: "Calificación",
-    enableSorting: true,
-    cell: ({ getValue }) => {
-      const rating = getValue() as number;
-      return (
-        <div className="flex items-center gap-2">
-          <RatingStars value={Math.round(rating)} readOnly size="sm" />
-          <span className="text-xs text-ink-2">{rating.toFixed(1)}</span>
-        </div>
-      );
-    },
-  },
-  {
-    accessorKey: "monthlyServices",
-    header: "Svc/mes",
-    enableSorting: true,
-    cell: ({ getValue }) => (
-      <span className="text-sm text-ink tabular-nums">{getValue() as number}</span>
-    ),
-  },
-  {
-    accessorKey: "hourlyRate",
-    header: "Tarifa/h",
-    enableSorting: true,
-    cell: ({ getValue }) => (
-      <span className="text-sm text-ink tabular-nums">
-        {cop(getValue() as number)}
-      </span>
-    ),
-  },
-  {
-    id: "actions",
-    header: "Acciones",
-    enableSorting: false,
-    cell: () => (
-      <div className="flex items-center gap-1">
-        <button
-          className="flex h-7 w-7 items-center justify-center rounded-md text-faint transition-colors hover:bg-brand-50 hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
-          aria-label="Ver Quicker"
-          title="Ver"
-        >
-          <Eye className="h-4 w-4" />
-        </button>
+function TempPasswordBanner({ email, password, onClose }: { email: string; password: string; onClose: () => void }) {
+  return (
+    <div className="rounded-xl border border-success/40 bg-success/5 p-4">
+      <div className="flex items-center gap-2 text-success">
+        <KeyRound className="size-4" />
+        <span className="font-semibold">Cuenta creada</span>
       </div>
-    ),
-  },
-];
+      <p className="mt-2 text-sm text-ink-2">
+        Entrega esta contraseña temporal a <span className="font-medium text-ink">{email}</span>. Se muestra una sola
+        vez; al primer ingreso deberá cambiarla.
+      </p>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <code className="select-all rounded-lg border border-line bg-surface px-3 py-2 font-mono text-sm font-bold text-ink">
+          {password}
+        </code>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            navigator.clipboard?.writeText(password).then(
+              () => toast.success("Copiada"),
+              () => toast.error("No se pudo copiar"),
+            );
+          }}
+        >
+          Copiar
+        </Button>
+        <Button size="sm" variant="ghost" onClick={onClose}>
+          Listo
+        </Button>
+      </div>
+    </div>
+  );
+}
 
-export default function Quickers() {
-  const { data: quickers, isLoading, isError, refetch } = useQuickers();
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("todos");
+function NewQuickerForm({ onCreated }: { onCreated: (email: string, pw: string) => void }) {
+  const cats = useAllCategories(true);
+  const create = useCreateQuicker();
+  const [skills, setSkills] = useState<string[]>([]);
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
-  const filtered = useMemo(() => {
-    if (!quickers) return [];
-    return quickers.filter((q) => {
-      const matchSearch =
-        search === "" ||
-        q.name.toLowerCase().includes(search.toLowerCase()) ||
-        q.doc.includes(search) ||
-        q.zone.toLowerCase().includes(search.toLowerCase());
-      const matchStatus = statusFilter === "todos" || q.status === statusFilter;
-      return matchSearch && matchStatus;
-    });
-  }, [quickers, search, statusFilter]);
+  const toggleSkill = (id: string) =>
+    setSkills((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+
+  const onSubmit = async (data: FormValues) => {
+    try {
+      const res = await create.mutateAsync({ ...data, skills });
+      onCreated(data.email, res.tempPassword);
+      reset();
+      setSkills([]);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo crear el quicker");
+    }
+  };
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold font-[var(--font-display)] text-ink">
-            Gestionar Quickers
-          </h1>
-          <p className="mt-0.5 text-sm text-faint">
-            {quickers?.length ?? 0} profesionales registrados
-          </p>
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="rounded-xl border border-line bg-surface p-4 shadow-sm sm:p-5">
+      <h2 className="mb-4 flex items-center gap-2 font-semibold text-ink">
+        <UserPlus className="size-4 text-brand-600" /> Nuevo quicker
+      </h2>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="q-name">Nombre</Label>
+          <Input id="q-name" {...register("name")} className={cn("border-line", errors.name && "border-danger")} placeholder="Carolina Méndez" />
+          {errors.name && <p className="text-xs text-danger">{errors.name.message}</p>}
         </div>
-        <Link
-          to="/admin/quickers/nuevo"
-          className={cn(
-            buttonVariants({ variant: "default", size: "default" }),
-            "bg-brand-600 hover:bg-brand-700 text-white shrink-0",
-          )}
-        >
-          <Plus className="h-4 w-4" />
-          Crear Quicker
-        </Link>
+        <div className="space-y-1.5">
+          <Label htmlFor="q-email">Correo</Label>
+          <Input id="q-email" type="email" {...register("email")} className={cn("border-line", errors.email && "border-danger")} placeholder="quicker@correo.com" />
+          {errors.email && <p className="text-xs text-danger">{errors.email.message}</p>}
+        </div>
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor="q-zone">Zona</Label>
+          <Input id="q-zone" {...register("zone")} className={cn("border-line", errors.zone && "border-danger")} placeholder="Chapinero" />
+          {errors.zone && <p className="text-xs text-danger">{errors.zone.message}</p>}
+        </div>
       </div>
 
-      {/* Toolbar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        {/* Search */}
-        <div className="relative flex-1 max-w-sm">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-faint pointer-events-none"
-            aria-hidden="true"
-          />
-          <Input
-            type="search"
-            placeholder="Buscar por nombre, doc o zona…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-            aria-label="Buscar Quicker"
-          />
-        </div>
-
-        {/* Status filter pills */}
-        <div
-          className="flex gap-1 flex-wrap"
-          role="group"
-          aria-label="Filtrar por estado"
-        >
-          {STATUS_FILTERS.map((s) => (
+      <div className="mt-4">
+        <Label className="mb-2 block">Habilidades (categorías)</Label>
+        <div className="flex flex-wrap gap-2">
+          {cats.data?.filter((c) => c.active).map((c) => (
             <button
-              key={s}
-              onClick={() => setStatusFilter(s)}
-              aria-pressed={statusFilter === s}
+              key={c.id}
+              type="button"
+              onClick={() => toggleSkill(c.id)}
               className={cn(
-                "rounded-full px-3 py-1.5 min-h-[36px] text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600",
-                statusFilter === s
-                  ? "bg-brand-600 text-white shadow-sm"
-                  : "bg-surface border border-line text-ink-2 hover:border-brand-300 hover:text-ink",
+                "rounded-full border px-3 py-1.5 text-sm transition-colors",
+                skills.includes(c.id)
+                  ? "border-brand-600 bg-brand-50 text-brand-700"
+                  : "border-line bg-surface text-ink-2 hover:border-brand-300",
               )}
             >
-              {s === "todos" ? "Todos" : STATUS_LABELS[s]}
+              {skills.includes(c.id) && <Check className="mr-1 inline size-3" />}
+              {c.name}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Table */}
-      {isLoading ? (
-        <LoadingState rows={5} />
-      ) : isError ? (
-        <ErrorState onRetry={refetch} />
-      ) : filtered.length === 0 ? (
-        <EmptyState
-          title="No hay Quickers"
-          hint={search || statusFilter !== "todos" ? "Ajusta los filtros para ver resultados." : "Crea el primer Quicker con el botón de arriba."}
-          action={
-            <Link
-              to="/admin/quickers/nuevo"
-              className={cn(buttonVariants({ variant: "default" }), "bg-brand-600 text-white hover:bg-brand-700")}
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Crear Quicker
-            </Link>
-          }
-        />
+      <Button type="submit" disabled={create.isPending} className="mt-4 h-11 w-full font-semibold sm:w-auto sm:px-8">
+        {create.isPending ? "Creando..." : "Crear quicker"}
+      </Button>
+    </form>
+  );
+}
+
+function QuickerRow({ q }: { q: AdminQuicker }) {
+  const update = useUpdateQuicker();
+  const [editing, setEditing] = useState(false);
+  const [zone, setZone] = useState(q.zone);
+  const cats = useAllCategories(editing);
+  const [skills, setSkills] = useState<string[]>(q.skills.map((s) => s.serviceCategory.id));
+
+  const toggleSkill = (id: string) =>
+    setSkills((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+
+  const save = () =>
+    update.mutate(
+      { id: q.id, zone, skills },
+      { onSuccess: () => { toast.success("Quicker actualizado"); setEditing(false); }, onError: () => toast.error("No se pudo actualizar") },
+    );
+
+  const toggleActive = () =>
+    update.mutate(
+      { id: q.id, active: !q.active },
+      { onSuccess: () => toast.success(q.active ? "Desactivado" : "Activado"), onError: () => toast.error("No se pudo actualizar") },
+    );
+
+  return (
+    <li className="rounded-xl border border-line bg-surface p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="truncate font-semibold text-ink">{q.name}</span>
+            <Badge className={q.active ? "bg-success/10 text-success" : "bg-muted text-faint"}>
+              {q.active ? "Activo" : "Inactivo"}
+            </Badge>
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-2">
+            <span className="inline-flex items-center gap-1"><MapPin className="size-3" /> {q.zone}</span>
+            <span className="inline-flex items-center gap-1"><Star className="size-3 text-amber-500" /> {q.rating}</span>
+            <span className="truncate text-faint">{q.user.email}</span>
+          </div>
+          <div className="mt-1.5 flex flex-wrap gap-1">
+            {q.skills.map((s) => (
+              <Badge key={s.serviceCategory.id} className="bg-brand-50 text-brand-700">{s.serviceCategory.name}</Badge>
+            ))}
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <Switch checked={q.active} onCheckedChange={toggleActive} aria-label="Activo" />
+          <Button size="sm" variant="outline" onClick={() => setEditing((v) => !v)}>
+            {editing ? "Cerrar" : "Editar"}
+          </Button>
+        </div>
+      </div>
+
+      {editing && (
+        <div className="mt-4 space-y-3 border-t border-line pt-4">
+          <div className="space-y-1.5">
+            <Label htmlFor={`zone-${q.id}`}>Zona</Label>
+            <Input id={`zone-${q.id}`} value={zone} onChange={(e) => setZone(e.target.value)} className="border-line" />
+          </div>
+          <div>
+            <Label className="mb-2 block">Habilidades</Label>
+            <div className="flex flex-wrap gap-2">
+              {cats.data?.filter((c) => c.active).map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => toggleSkill(c.id)}
+                  className={cn(
+                    "rounded-full border px-3 py-1.5 text-sm transition-colors",
+                    skills.includes(c.id) ? "border-brand-600 bg-brand-50 text-brand-700" : "border-line bg-surface text-ink-2 hover:border-brand-300",
+                  )}
+                >
+                  {skills.includes(c.id) && <Check className="mr-1 inline size-3" />}
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          </div>
+          <Button size="sm" disabled={update.isPending} className="bg-brand-600 text-white hover:bg-brand-700" onClick={save}>
+            Guardar cambios
+          </Button>
+        </div>
+      )}
+    </li>
+  );
+}
+
+export default function Quickers() {
+  const enabled = !!useSession((s) => s.accessToken);
+  const quickers = useAdminQuickers(enabled);
+  const [showForm, setShowForm] = useState(false);
+  const [created, setCreated] = useState<{ email: string; pw: string } | null>(null);
+
+  return (
+    <div className="space-y-6">
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-bold leading-tight text-ink">Quickers</h1>
+          <p className="mt-1 text-sm text-ink-2">Alta y gestión de trabajadoras (usuario, zona, habilidades).</p>
+        </div>
+        {enabled && (
+          <Button
+            variant={showForm ? "outline" : "default"}
+            className={showForm ? "" : "bg-brand-600 text-white hover:bg-brand-700"}
+            onClick={() => { setShowForm((v) => !v); setCreated(null); }}
+          >
+            {showForm ? "Cerrar" : "Nuevo quicker"}
+          </Button>
+        )}
+      </header>
+
+      {!enabled ? (
+        <div className="rounded-xl border border-line bg-surface">
+          <EmptyState title="Acceso restringido" hint="Inicia sesión como administrador (user.manage)." />
+        </div>
       ) : (
-        <DataTable columns={columns} data={filtered} pageSize={8} />
+        <>
+          {created && <TempPasswordBanner email={created.email} password={created.pw} onClose={() => setCreated(null)} />}
+          {showForm && <NewQuickerForm onCreated={(email, pw) => { setCreated({ email, pw }); setShowForm(false); }} />}
+
+          {quickers.isLoading ? (
+            <LoadingState rows={3} />
+          ) : quickers.isError ? (
+            <ErrorState onRetry={() => quickers.refetch()} />
+          ) : !quickers.data || quickers.data.length === 0 ? (
+            <div className="rounded-xl border border-line bg-surface">
+              <EmptyState title="Sin quickers" hint="Crea la primera trabajadora con Nuevo quicker." />
+            </div>
+          ) : (
+            <ul className="grid grid-cols-1 gap-3">
+              {quickers.data.map((q) => (
+                <QuickerRow key={q.id} q={q} />
+              ))}
+            </ul>
+          )}
+        </>
       )}
     </div>
   );

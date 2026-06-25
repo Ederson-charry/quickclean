@@ -1,333 +1,233 @@
-import { useState, useMemo } from "react";
-import { useClients, useDeleteClient } from "@/hooks/queries";
-import { LoadingState, ErrorState, EmptyState } from "@/components/shared/States";
-import { DataTable } from "@/components/shared/DataTable";
-import { buttonVariants } from "@/components/ui/button";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Link } from "@tanstack/react-router";
-import { Search, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
-import { cop } from "@/lib/format";
-import { cn } from "@/lib/utils";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Building2, KeyRound, ShieldCheck, UserPlus, UserRound } from "lucide-react";
 import { toast } from "sonner";
-import type { Client } from "@/mocks/types";
-import type { ColumnDef } from "@tanstack/react-table";
+import {
+  type AdminClient,
+  useAdminClients,
+  useCreateClient,
+  useUpdateClient,
+} from "@/hooks/catalog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { EmptyState, ErrorState, LoadingState } from "@/components/shared/States";
+import { cn } from "@/lib/utils";
+import { useSession } from "@/stores/session";
 
-const TYPE_LABELS: Record<string, string> = {
-  persona: "Persona",
-  empresa: "Empresa",
-};
+const schema = z.object({
+  email: z.string().email("Correo inválido"),
+  name: z.string().min(2, "Nombre requerido"),
+  kind: z.enum(["persona", "empresa"]),
+  phone: z.string().optional(),
+});
+type FormValues = z.infer<typeof schema>;
 
-const TYPE_VARIANT: Record<string, "default" | "outline" | "secondary"> = {
-  persona: "secondary",
-  empresa: "default",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  activo: "Activo",
-  inactivo: "Inactivo",
-};
-
-const STATUS_VARIANT: Record<string, "default" | "outline"> = {
-  activo: "default",
-  inactivo: "outline",
-};
-
-const TYPE_FILTERS = ["todos", "persona", "empresa"] as const;
-
-function DeleteDialog({
-  client,
-  onConfirm,
-  onClose,
-  isPending,
-}: {
-  client: Client;
-  onConfirm: () => void;
-  onClose: () => void;
-  isPending: boolean;
-}) {
+function TempPasswordBanner({ email, password, onClose }: { email: string; password: string; onClose: () => void }) {
   return (
-    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent showCloseButton={false} className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Eliminar cliente</DialogTitle>
-        </DialogHeader>
-        <p className="text-sm text-ink-2">
-          ¿Seguro que deseas eliminar a <strong className="text-ink">{client.name}</strong>?
-          Esta acción no se puede deshacer.
-        </p>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isPending}>
-            Cancelar
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={onConfirm}
-            disabled={isPending}
-            className="min-w-[100px]"
+    <div className="rounded-xl border border-success/40 bg-success/5 p-4">
+      <div className="flex items-center gap-2 text-success">
+        <KeyRound className="size-4" />
+        <span className="font-semibold">Cuenta creada</span>
+      </div>
+      <p className="mt-2 text-sm text-ink-2">
+        Entrega esta contraseña temporal a <span className="font-medium text-ink">{email}</span>. Se muestra una sola
+        vez; al primer ingreso deberá cambiarla.
+      </p>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <code className="select-all rounded-lg border border-line bg-surface px-3 py-2 font-mono text-sm font-bold text-ink">
+          {password}
+        </code>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() =>
+            navigator.clipboard?.writeText(password).then(
+              () => toast.success("Copiada"),
+              () => toast.error("No se pudo copiar"),
+            )
+          }
+        >
+          Copiar
+        </Button>
+        <Button size="sm" variant="ghost" onClick={onClose}>Listo</Button>
+      </div>
+    </div>
+  );
+}
+
+function NewClientForm({ onCreated }: { onCreated: (email: string, pw: string) => void }) {
+  const create = useCreateClient();
+  const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { kind: "persona" },
+  });
+  const kind = watch("kind");
+
+  const onSubmit = async (data: FormValues) => {
+    try {
+      const res = await create.mutateAsync({
+        email: data.email,
+        name: data.name,
+        kind: data.kind,
+        phone: data.phone || undefined,
+      });
+      onCreated(data.email, res.tempPassword);
+      reset({ kind: "persona" });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo crear el cliente");
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="rounded-xl border border-line bg-surface p-4 shadow-sm sm:p-5">
+      <h2 className="mb-4 flex items-center gap-2 font-semibold text-ink">
+        <UserPlus className="size-4 text-brand-600" /> Nuevo cliente
+      </h2>
+
+      <div className="mb-4 grid grid-cols-2 gap-3" role="radiogroup" aria-label="Tipo de cliente">
+        {(["persona", "empresa"] as const).map((k) => (
+          <button
+            key={k}
+            type="button"
+            role="radio"
+            aria-checked={kind === k}
+            onClick={() => setValue("kind", k, { shouldValidate: true })}
+            className={cn(
+              "flex items-center gap-2 rounded-xl border-2 p-3 text-left transition-all",
+              kind === k ? "border-brand-600 bg-brand-50" : "border-line bg-surface hover:border-brand-300",
+            )}
           >
-            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Eliminar"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            {k === "empresa" ? <Building2 className="size-4 text-brand-600" /> : <UserRound className="size-4 text-brand-600" />}
+            <span className={cn("text-sm font-semibold", kind === k ? "text-brand-700" : "text-ink")}>
+              {k === "empresa" ? "Empresa" : "Persona"}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="c-name">{kind === "empresa" ? "Razón social" : "Nombre"}</Label>
+          <Input id="c-name" {...register("name")} className={cn("border-line", errors.name && "border-danger")} placeholder={kind === "empresa" ? "Oficinas Andinas SAS" : "Laura Gómez"} />
+          {errors.name && <p className="text-xs text-danger">{errors.name.message}</p>}
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="c-email">Correo</Label>
+          <Input id="c-email" type="email" {...register("email")} className={cn("border-line", errors.email && "border-danger")} placeholder="cliente@correo.com" />
+          {errors.email && <p className="text-xs text-danger">{errors.email.message}</p>}
+        </div>
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor="c-phone">Teléfono (opcional)</Label>
+          <Input id="c-phone" {...register("phone")} className="border-line" placeholder="300 123 4567" />
+        </div>
+      </div>
+
+      {kind === "empresa" && (
+        <p className="mt-3 flex items-center gap-1.5 text-xs text-ink-2">
+          <ShieldCheck className="size-3.5 text-brand-600" /> Las empresas exigen contratación laboral directa (solidaridad §6).
+        </p>
+      )}
+
+      <Button type="submit" disabled={create.isPending} className="mt-4 h-11 w-full font-semibold sm:w-auto sm:px-8">
+        {create.isPending ? "Creando..." : "Crear cliente"}
+      </Button>
+    </form>
+  );
+}
+
+function ClientRow({ c }: { c: AdminClient }) {
+  const update = useUpdateClient();
+  const empresa = c.kind === "empresa";
+  const toggleDirectHire = () =>
+    update.mutate(
+      { id: c.id, requiresDirectHire: !c.requiresDirectHire },
+      { onSuccess: () => toast.success("Actualizado"), onError: () => toast.error("No se pudo actualizar") },
+    );
+
+  return (
+    <li className="rounded-xl border border-line bg-surface p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 truncate font-semibold text-ink">
+              {empresa ? <Building2 className="size-4 text-faint" /> : <UserRound className="size-4 text-faint" />}
+              {c.name}
+            </span>
+            <Badge className={empresa ? "bg-brand-100 text-brand-700" : "bg-muted text-ink-2"}>
+              {empresa ? "Empresa" : "Persona"}
+            </Badge>
+            {c.requiresDirectHire && <Badge className="bg-amber-100 text-amber-700">Contratación directa</Badge>}
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-2">
+            <span className="truncate text-faint">{c.user.email}</span>
+            {c.user.phone && <span>{c.user.phone}</span>}
+          </div>
+        </div>
+        {empresa && (
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="text-xs text-ink-2">Directa</span>
+            <Switch checked={c.requiresDirectHire} onCheckedChange={toggleDirectHire} aria-label="Contratación directa" />
+          </div>
+        )}
+      </div>
+    </li>
   );
 }
 
 export default function Clientes() {
-  const { data: clients, isLoading, isError, refetch } = useClients();
-  const { mutateAsync: deleteClient, isPending: isDeleting } = useDeleteClient();
-  const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>("todos");
-  const [toDelete, setToDelete] = useState<Client | null>(null);
-
-  const filtered = useMemo(() => {
-    if (!clients) return [];
-    return clients.filter((c) => {
-      const matchSearch =
-        search === "" ||
-        c.name.toLowerCase().includes(search.toLowerCase()) ||
-        c.doc.includes(search) ||
-        c.email.toLowerCase().includes(search.toLowerCase());
-      const matchType = typeFilter === "todos" || c.type === typeFilter;
-      return matchSearch && matchType;
-    });
-  }, [clients, search, typeFilter]);
-
-  const handleDelete = async () => {
-    if (!toDelete) return;
-    try {
-      await deleteClient(toDelete.id);
-      toast.success(`Cliente "${toDelete.name}" eliminado`);
-      setToDelete(null);
-    } catch {
-      toast.error("Error al eliminar el cliente. Inténtalo de nuevo.");
-    }
-  };
-
-  const columns: ColumnDef<Client, unknown>[] = [
-    {
-      id: "cliente",
-      header: "Cliente",
-      accessorFn: (row) => row.name,
-      enableSorting: true,
-      cell: ({ row }) => {
-        const c = row.original;
-        return (
-          <div className="min-w-[160px]">
-            <p className="font-medium text-ink text-sm truncate">{c.name}</p>
-            <p className="text-xs text-ink-2 truncate">{c.doc}</p>
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "type",
-      header: "Tipo",
-      enableSorting: true,
-      cell: ({ getValue }) => {
-        const type = getValue() as string;
-        return (
-          <Badge variant={TYPE_VARIANT[type] ?? "outline"}>
-            {TYPE_LABELS[type] ?? type}
-          </Badge>
-        );
-      },
-    },
-    {
-      accessorKey: "city",
-      header: "Ciudad",
-      enableSorting: true,
-      cell: ({ getValue }) => (
-        <span className="text-sm text-ink-2">{getValue() as string}</span>
-      ),
-    },
-    {
-      id: "contacto",
-      header: "Contacto",
-      enableSorting: false,
-      accessorFn: (row) => row.email,
-      cell: ({ row }) => {
-        const c = row.original;
-        return (
-          <div className="min-w-[160px]">
-            <p className="text-sm text-ink truncate">{c.email}</p>
-            <p className="text-xs text-ink-2">{c.phone}</p>
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "bookingsCount",
-      header: "Servicios",
-      enableSorting: true,
-      cell: ({ getValue }) => (
-        <span className="text-sm text-ink tabular-nums">{getValue() as number}</span>
-      ),
-    },
-    {
-      accessorKey: "totalSpent",
-      header: "Total gastado",
-      enableSorting: true,
-      cell: ({ getValue }) => (
-        <span className="text-sm text-ink tabular-nums">
-          {cop(getValue() as number)}
-        </span>
-      ),
-    },
-    {
-      accessorKey: "status",
-      header: "Estado",
-      enableSorting: true,
-      cell: ({ getValue }) => {
-        const status = getValue() as string;
-        return (
-          <Badge variant={STATUS_VARIANT[status] ?? "outline"}>
-            {STATUS_LABELS[status] ?? status}
-          </Badge>
-        );
-      },
-    },
-    {
-      id: "actions",
-      header: "Acciones",
-      enableSorting: false,
-      cell: ({ row }) => {
-        const c = row.original;
-        return (
-          <div className="flex items-center gap-1">
-            <Link
-              to="/admin/clientes/$id"
-              params={{ id: c.id }}
-              className="flex h-7 w-7 items-center justify-center rounded-md text-faint transition-colors hover:bg-brand-50 hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
-              aria-label={`Editar ${c.name}`}
-              title="Editar"
-            >
-              <Pencil className="h-4 w-4" />
-            </Link>
-            <button
-              onClick={() => setToDelete(c)}
-              className="flex h-7 w-7 items-center justify-center rounded-md text-faint transition-colors hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger"
-              aria-label={`Eliminar ${c.name}`}
-              title="Eliminar"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
-        );
-      },
-    },
-  ];
+  const enabled = !!useSession((s) => s.accessToken);
+  const clients = useAdminClients(enabled);
+  const [showForm, setShowForm] = useState(false);
+  const [created, setCreated] = useState<{ email: string; pw: string } | null>(null);
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-6">
+      <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold font-[var(--font-display)] text-ink">
-            Gestionar Clientes
-          </h1>
-          <p className="mt-0.5 text-sm text-faint">
-            {clients?.length ?? 0} clientes registrados
-          </p>
+          <h1 className="font-display text-2xl font-bold leading-tight text-ink">Clientes</h1>
+          <p className="mt-1 text-sm text-ink-2">Alta y gestión de clientes (persona o empresa).</p>
         </div>
-        <Link
-          to="/admin/clientes/nuevo"
-          className={cn(
-            buttonVariants({ variant: "default", size: "default" }),
-            "bg-brand-600 hover:bg-brand-700 text-white shrink-0",
-          )}
-        >
-          <Plus className="h-4 w-4" />
-          Crear cliente
-        </Link>
-      </div>
+        {enabled && (
+          <Button
+            variant={showForm ? "outline" : "default"}
+            className={showForm ? "" : "bg-brand-600 text-white hover:bg-brand-700"}
+            onClick={() => { setShowForm((v) => !v); setCreated(null); }}
+          >
+            {showForm ? "Cerrar" : "Nuevo cliente"}
+          </Button>
+        )}
+      </header>
 
-      {/* Toolbar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        {/* Search */}
-        <div className="relative flex-1 max-w-sm">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-faint pointer-events-none"
-            aria-hidden="true"
-          />
-          <Input
-            type="search"
-            placeholder="Buscar por nombre, doc o correo…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-            aria-label="Buscar cliente"
-          />
+      {!enabled ? (
+        <div className="rounded-xl border border-line bg-surface">
+          <EmptyState title="Acceso restringido" hint="Inicia sesión como administrador (user.manage)." />
         </div>
-
-        {/* Type filter pills */}
-        <div
-          className="flex gap-1 flex-wrap"
-          role="group"
-          aria-label="Filtrar por tipo"
-        >
-          {TYPE_FILTERS.map((t) => (
-            <button
-              key={t}
-              onClick={() => setTypeFilter(t)}
-              aria-pressed={typeFilter === t}
-              className={cn(
-                "rounded-full px-3 py-1.5 min-h-[36px] text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600",
-                typeFilter === t
-                  ? "bg-brand-600 text-white shadow-sm"
-                  : "bg-surface border border-line text-ink-2 hover:border-brand-300 hover:text-ink",
-              )}
-            >
-              {t === "todos" ? "Todos" : TYPE_LABELS[t]}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Table */}
-      {isLoading ? (
-        <LoadingState rows={5} />
-      ) : isError ? (
-        <ErrorState onRetry={refetch} />
-      ) : filtered.length === 0 ? (
-        <EmptyState
-          title="No hay clientes"
-          hint={
-            search || typeFilter !== "todos"
-              ? "Ajusta los filtros para ver resultados."
-              : "Crea el primer cliente con el botón de arriba."
-          }
-          action={
-            <Link
-              to="/admin/clientes/nuevo"
-              className={cn(buttonVariants({ variant: "default" }), "bg-brand-600 text-white hover:bg-brand-700")}
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Crear cliente
-            </Link>
-          }
-        />
       ) : (
-        <DataTable columns={columns} data={filtered} pageSize={8} />
-      )}
+        <>
+          {created && <TempPasswordBanner email={created.email} password={created.pw} onClose={() => setCreated(null)} />}
+          {showForm && <NewClientForm onCreated={(email, pw) => { setCreated({ email, pw }); setShowForm(false); }} />}
 
-      {/* Delete confirm dialog */}
-      {toDelete && (
-        <DeleteDialog
-          client={toDelete}
-          onConfirm={handleDelete}
-          onClose={() => setToDelete(null)}
-          isPending={isDeleting}
-        />
+          {clients.isLoading ? (
+            <LoadingState rows={3} />
+          ) : clients.isError ? (
+            <ErrorState onRetry={() => clients.refetch()} />
+          ) : !clients.data || clients.data.length === 0 ? (
+            <div className="rounded-xl border border-line bg-surface">
+              <EmptyState title="Sin clientes" hint="Crea el primer cliente con Nuevo cliente." />
+            </div>
+          ) : (
+            <ul className="grid grid-cols-1 gap-3">
+              {clients.data.map((c) => (
+                <ClientRow key={c.id} c={c} />
+              ))}
+            </ul>
+          )}
+        </>
       )}
     </div>
   );

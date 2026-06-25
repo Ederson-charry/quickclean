@@ -1,6 +1,6 @@
 import { Body, Controller, Get, HttpCode, Post, Req, Res, UseGuards } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
-import { LoginInput } from "@quickclean/shared";
+import { ForcedPasswordChangeInput, LoginInput } from "@quickclean/shared";
 import type { Request, Response } from "express";
 import { CurrentUser, type AuthUser } from "../common/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
@@ -38,6 +38,20 @@ export class AuthController {
       return { accessToken: result.accessToken };
     }
     return result; // { mustChangePassword: true }
+  }
+
+  // Cambio de contraseña forzado (primer ingreso). Mismo límite estricto que login.
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post("cambiar-password")
+  @HttpCode(200)
+  async changePassword(@Body() body: unknown, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const input = ForcedPasswordChangeInput.parse(body);
+    const tokens = await this.auth.changePassword(input, {
+      ip: req.ip,
+      userAgent: req.headers["user-agent"],
+    });
+    res.cookie(REFRESH_COOKIE, tokens.refreshToken, refreshCookieOptions);
+    return { accessToken: tokens.accessToken };
   }
 
   @Post("refresh")
