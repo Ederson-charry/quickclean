@@ -68,6 +68,7 @@ const Compensacion = withSuspense(lazy(() => import("@/features/admin/Compensaci
 const Conciliacion = withSuspense(lazy(() => import("@/features/admin/Conciliacion")));
 const AdminSolicitudes = withSuspense(lazy(() => import("@/features/admin/Solicitudes")));
 const Contratos = withSuspense(lazy(() => import("@/features/admin/Contratos")));
+const Nomina = withSuspense(lazy(() => import("@/features/admin/Nomina")));
 
 // ─── Root route ───────────────────────────────────────────────────────────────
 const rootRoute = createRootRoute({
@@ -271,6 +272,12 @@ const adminContratosRoute = createRoute({
   component: Contratos,
 });
 
+const adminNominaRoute = createRoute({
+  getParentRoute: () => adminLayoutRoute,
+  path: "/admin/nomina",
+  component: Nomina,
+});
+
 // ─── Route tree ───────────────────────────────────────────────────────────────
 const routeTree = rootRoute.addChildren([
   loginRoute,
@@ -306,6 +313,7 @@ const routeTree = rootRoute.addChildren([
     adminConciliacionRoute,
     adminSolicitudesRoute,
     adminContratosRoute,
+    adminNominaRoute,
   ]),
 ]);
 

@@ -69,6 +69,7 @@ export class ContractsService {
         engagementType: input.engagementType,
         position: input.position,
         contractKind: input.contractKind,
+        monthlySalary: input.engagementType === "employee" ? input.monthlySalary ?? null : null,
         startDate: input.startDate ?? new Date(),
         status: "activo",
       },

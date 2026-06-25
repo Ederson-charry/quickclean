@@ -8,6 +8,8 @@ export const CreateContractInput = z
     engagementType: z.enum(["contractor", "employee"]),
     position: z.string().trim().min(2).max(80).optional(),
     contractKind: z.enum(["prestacion", "fijo", "indefinido"]),
+    /** Salario base mensual (COP); requerido para liquidar nómina de un employee. */
+    monthlySalary: z.number().int().positive().optional(),
     startDate: z.coerce.date().optional(),
   })
   .refine((d) => (d.engagementType === "contractor" ? d.contractKind === "prestacion" : d.contractKind !== "prestacion"), {
