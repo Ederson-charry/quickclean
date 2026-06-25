@@ -14,6 +14,7 @@ import { ContractsModule } from "./contracts/contracts.module";
 import { ErpModule } from "./erp/erp.module";
 import { HealthController } from "./health/health.controller";
 import { LeaveModule } from "./leave/leave.module";
+import { MetricsModule } from "./metrics/metrics.module";
 import { MfaModule } from "./mfa/mfa.module";
 import { NotificationModule } from "./notifications/notification.module";
 import { PayrollModule } from "./payroll/payroll.module";
@@ -36,6 +37,7 @@ import { StaffModule } from "./staff/staff.module";
     ContractsModule,
     ErpModule,
     LeaveModule,
+    MetricsModule,
     NotificationModule,
     PayrollModule,
     PrivacyModule,

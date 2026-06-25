@@ -996,3 +996,31 @@ export async function downloadMyData() {
   a.click();
   URL.revokeObjectURL(url);
 }
+
+// ─── Indicadores (dashboard real) ─────────────────────────────────────────────
+export interface MetricsOverview {
+  revenueMonth: number;
+  revenueMonthDelta: number;
+  completedMonth: number;
+  completedDelta: number;
+  activeQuickers: number;
+  avgRating: number;
+  totalClients: number;
+  empresas: number;
+  pendingPayout: number;
+  paidPayout: number;
+  payrollNet: number;
+  payrollRuns: number;
+  revenueByMonth: { month: string; value: number }[];
+  byStatus: { name: string; value: number }[];
+  byZone: { name: string; value: number }[];
+  topQuickers: { name: string; zone: string; rating: number }[];
+}
+
+export function useMetrics(enabled: boolean) {
+  return useQuery({
+    queryKey: ["indicadores"],
+    enabled,
+    queryFn: () => apiFetch<MetricsOverview>("/admin/indicadores", { headers: authHeaders() }),
+  });
+}

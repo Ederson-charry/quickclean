@@ -15,12 +15,15 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { DollarSign, CheckCircle2, Users, Star } from "lucide-react";
+import { DollarSign, CheckCircle2, Users, Star, Building2, Banknote, Receipt, UserRound } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useMetrics } from "@/hooks/catalog";
+import { EmptyState } from "@/components/shared/States";
+import { useSession } from "@/stores/session";
 
-const DONUT_COLORS = ["#0B5BD6", "#6FA4FF", "#E0453B"];
+const DONUT_COLORS = ["#0B5BD6", "#6FA4FF", "#E0453B", "#F5A623"];
 
-export default function Dashboard() {
+function MockDashboard() {
   const { data: kpis, isLoading: kpisLoading, isError: kpisError, refetch: kpisRefetch } = useKpis();
   const { data: quickers, isLoading: quickersLoading } = useQuickers();
 
@@ -224,4 +227,151 @@ export default function Dashboard() {
       </div>
     </div>
   );
+}
+
+// ── Dashboard real (datos del backend) ──────────────────────────────────────────
+function MiniStat({ icon: Icon, label, value }: { icon: typeof Banknote; label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-line bg-surface p-4">
+      <div className="flex items-center gap-2 text-faint">
+        <Icon className="size-4" />
+        <span className="text-xs">{label}</span>
+      </div>
+      <p className="mt-1 text-lg font-bold tabular-nums text-ink">{value}</p>
+    </div>
+  );
+}
+
+function RealDashboard() {
+  const { data: m, isLoading, isError, refetch } = useMetrics(true);
+
+  if (isLoading) return <LoadingState rows={4} />;
+  if (isError) return <ErrorState onRetry={() => refetch()} />;
+  if (!m) return null;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="font-display text-2xl font-bold text-ink">Indicadores</h1>
+        <p className="mt-0.5 text-sm text-faint">Panel de control — QuickClean</p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard icon={DollarSign} value={cop(m.revenueMonth)} label="Ingresos del mes" delta={m.revenueMonthDelta} />
+        <StatCard icon={CheckCircle2} value={m.completedMonth.toLocaleString("es-CO")} label="Servicios completados" delta={m.completedDelta} />
+        <StatCard icon={Users} value={m.activeQuickers.toLocaleString("es-CO")} label="Quickers activos" />
+        <StatCard icon={Star} value={m.avgRating.toFixed(1)} label="Calificación media" iconColor="text-yellow-500" />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <MiniStat icon={UserRound} label="Clientes" value={m.totalClients.toLocaleString("es-CO")} />
+        <MiniStat icon={Building2} label="Empresas" value={m.empresas.toLocaleString("es-CO")} />
+        <MiniStat icon={Banknote} label="Pendiente por liquidar" value={cop(m.pendingPayout)} />
+        <MiniStat icon={Receipt} label="Nómina liquidada" value={cop(m.payrollNet)} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="rounded-xl border border-line bg-surface p-5 lg:col-span-2">
+          <h2 className="mb-4 text-base font-semibold text-ink">
+            Ingresos por mes <span className="text-xs font-normal text-faint">(millones COP)</span>
+          </h2>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={m.revenueByMonth} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E6ECF4" vertical={false} />
+              <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#7B89A3" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 12, fill: "#7B89A3" }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v}M`} />
+              <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #E6ECF4" }} formatter={(v) => [`$${v}M`, "Ingresos"]} />
+              <Bar dataKey="value" fill="#0B5BD6" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="rounded-xl border border-line bg-surface p-5">
+          <h2 className="mb-4 text-base font-semibold text-ink">Reservas por estado</h2>
+          {m.byStatus.length === 0 ? (
+            <EmptyState title="Sin reservas" hint="Aún no hay reservas registradas." />
+          ) : (
+            <>
+              <ResponsiveContainer width="100%" height={160}>
+                <PieChart>
+                  <Pie data={m.byStatus} dataKey="value" nameKey="name" innerRadius={42} outerRadius={64} paddingAngle={2}>
+                    {m.byStatus.map((_, i) => (
+                      <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+              <ul className="mt-2 space-y-1">
+                {m.byStatus.map((s, i) => (
+                  <li key={s.name} className="flex items-center justify-between text-sm">
+                    <span className="inline-flex items-center gap-2 text-ink-2">
+                      <span className="size-2.5 rounded-full" style={{ backgroundColor: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+                      {s.name}
+                    </span>
+                    <span className="font-medium tabular-nums text-ink">{s.value}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="rounded-xl border border-line bg-surface p-5">
+          <h2 className="mb-3 text-base font-semibold text-ink">Mejores quickers</h2>
+          {m.topQuickers.length === 0 ? (
+            <EmptyState title="Sin quickers" hint="Crea trabajadoras en la sección Quickers." />
+          ) : (
+            <ul className="space-y-2">
+              {m.topQuickers.map((q) => (
+                <li key={q.name} className="flex items-center justify-between gap-3">
+                  <span className="inline-flex items-center gap-2">
+                    <Avatar className="size-8"><AvatarFallback>{q.name.slice(0, 1)}</AvatarFallback></Avatar>
+                    <span>
+                      <span className="block text-sm font-medium text-ink">{q.name}</span>
+                      <span className="block text-xs text-faint">{q.zone}</span>
+                    </span>
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-sm font-medium text-ink">
+                    <Star className="size-3.5 text-yellow-500" /> {q.rating}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-line bg-surface p-5">
+          <h2 className="mb-3 text-base font-semibold text-ink">Quickers por zona</h2>
+          {m.byZone.length === 0 ? (
+            <EmptyState title="Sin zonas" hint="Aún no hay quickers." />
+          ) : (
+            <ul className="space-y-2">
+              {m.byZone.map((z) => {
+                const max = Math.max(...m.byZone.map((x) => x.value));
+                return (
+                  <li key={z.name} className="text-sm">
+                    <div className="mb-1 flex justify-between">
+                      <span className="text-ink-2">{z.name}</span>
+                      <span className="font-medium text-ink">{z.value}</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-bg">
+                      <div className="h-full rounded-full bg-brand-500" style={{ width: `${(z.value / max) * 100}%` }} />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function Dashboard() {
+  const useReal = !!useSession((s) => s.accessToken);
+  return useReal ? <RealDashboard /> : <MockDashboard />;
 }
