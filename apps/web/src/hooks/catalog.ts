@@ -922,3 +922,77 @@ export function useNotifications(enabled: boolean) {
     queryFn: () => apiFetch<NotificationDTO[]>("/admin/notificaciones", { headers: authHeaders() }),
   });
 }
+
+// ─── Habeas Data (derechos del titular) ───────────────────────────────────────
+export interface DataPolicy {
+  version: string;
+  updatedAt: string;
+  title: string;
+  summary: string;
+  rights: string[];
+  retentionNote: string;
+  contact: string;
+}
+
+export interface ConsentStatus {
+  currentVersion: string;
+  acceptedVersion: string | null;
+  acceptedAt: string | null;
+  needsConsent: boolean;
+}
+
+export function useDataPolicy() {
+  return useQuery({
+    queryKey: ["politica-datos"],
+    queryFn: () => apiFetch<DataPolicy>("/legal/politica-datos"),
+  });
+}
+
+export function useConsentStatus(enabled: boolean) {
+  return useQuery({
+    queryKey: ["consentimiento"],
+    enabled,
+    queryFn: () => apiFetch<ConsentStatus>("/me/consentimiento", { headers: authHeaders() }),
+  });
+}
+
+export function useGiveConsent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiFetch("/me/consentimiento", { method: "POST", headers: authHeaders() }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["consentimiento"] }),
+  });
+}
+
+export function useWithdrawConsent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiFetch("/me/consentimiento", { method: "DELETE", headers: authHeaders() }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["consentimiento"] }),
+  });
+}
+
+export function useRectifyProfile() {
+  return useMutation({
+    mutationFn: (patch: { phone?: string; name?: string }) =>
+      apiFetch("/me/perfil", { method: "PATCH", headers: authHeaders(), body: JSON.stringify(patch) }),
+  });
+}
+
+export function useDeleteAccount() {
+  return useMutation({
+    mutationFn: () => apiFetch("/me/cuenta", { method: "DELETE", headers: authHeaders() }),
+  });
+}
+
+/** Descarga el export de datos personales como archivo JSON. */
+export async function downloadMyData() {
+  const data = await apiFetch<unknown>("/me/datos", { headers: authHeaders() });
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "mis-datos-quickclean.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}

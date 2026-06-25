@@ -152,6 +152,15 @@ export default function Perfil() {
 
       <Separator />
 
+      {/* Privacidad */}
+      <button
+        type="button"
+        onClick={() => navigate({ to: "/privacidad" })}
+        className="flex w-full items-center gap-2 rounded-xl border border-line bg-surface px-4 py-3 text-left text-sm font-medium text-ink-2 transition-colors hover:border-brand-300 hover:text-ink"
+      >
+        <Shield className="h-4 w-4 text-brand-600" /> Privacidad y datos
+      </button>
+
       {/* Logout */}
       <div className="pb-4">
         <Button

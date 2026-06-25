@@ -18,6 +18,7 @@ import { MfaModule } from "./mfa/mfa.module";
 import { NotificationModule } from "./notifications/notification.module";
 import { PayrollModule } from "./payroll/payroll.module";
 import { PrismaService } from "./prisma/prisma.service";
+import { PrivacyModule } from "./privacy/privacy.module";
 import { StaffModule } from "./staff/staff.module";
 
 @Module({
@@ -37,6 +38,7 @@ import { StaffModule } from "./staff/staff.module";
     LeaveModule,
     NotificationModule,
     PayrollModule,
+    PrivacyModule,
     StaffModule,
     UsersModule,
   ],
