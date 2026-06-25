@@ -15,6 +15,7 @@ import { ErpModule } from "./erp/erp.module";
 import { HealthController } from "./health/health.controller";
 import { LeaveModule } from "./leave/leave.module";
 import { MfaModule } from "./mfa/mfa.module";
+import { PayrollModule } from "./payroll/payroll.module";
 import { PrismaService } from "./prisma/prisma.service";
 
 @Module({
@@ -32,6 +33,7 @@ import { PrismaService } from "./prisma/prisma.service";
     ContractsModule,
     ErpModule,
     LeaveModule,
+    PayrollModule,
     UsersModule,
   ],
   controllers: [HealthController],

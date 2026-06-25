@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/States";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { fechaCorta } from "@/lib/format";
+import { cop, fechaCorta } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/stores/session";
 
@@ -32,10 +32,15 @@ const schema = z
     engagementType: z.enum(["contractor", "employee"]),
     contractKind: z.enum(["prestacion", "fijo", "indefinido"]),
     position: z.string().trim().max(80).optional(),
+    monthlySalary: z.number().int().positive().optional(),
   })
   .refine((d) => (d.engagementType === "contractor" ? d.contractKind === "prestacion" : d.contractKind !== "prestacion"), {
     message: "Contratista ⇒ prestación; empleado ⇒ fijo o indefinido",
     path: ["contractKind"],
+  })
+  .refine((d) => d.engagementType !== "employee" || (d.monthlySalary ?? 0) > 0, {
+    message: "El empleado requiere salario base mensual",
+    path: ["monthlySalary"],
   });
 type FormValues = z.infer<typeof schema>;
 
@@ -88,6 +93,7 @@ function NewContractForm() {
         engagementType: data.engagementType,
         contractKind: data.contractKind,
         position: data.position || undefined,
+        monthlySalary: data.engagementType === "employee" ? data.monthlySalary : undefined,
       });
       toast.success("Contrato creado");
       reset({ quickerId: "", clientId: POOL, engagementType: "contractor", contractKind: "prestacion", position: "" });
@@ -191,6 +197,22 @@ function NewContractForm() {
             onChange={(e) => setValue("position", e.target.value)}
           />
         </div>
+
+        {/* Salario base — solo empleados */}
+        {engagementType === "employee" && (
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="ct-salary">Salario base mensual (COP)</Label>
+            <Input
+              id="ct-salary"
+              type="number"
+              min={0}
+              placeholder="Ej. 1800000"
+              className={cn("border-line", errors.monthlySalary && "border-danger")}
+              onChange={(e) => setValue("monthlySalary", e.target.value ? Number(e.target.value) : undefined, { shouldValidate: true })}
+            />
+            {errors.monthlySalary && <p className="text-xs text-danger">{errors.monthlySalary.message}</p>}
+          </div>
+        )}
       </div>
 
       <Button type="submit" disabled={create.isPending} className="mt-4 h-11 w-full font-semibold sm:w-auto sm:px-8">
@@ -230,6 +252,11 @@ function ContractRow({ c }: { c: ContractDTO }) {
             {c.position && (
               <span className="inline-flex items-center gap-1">
                 <MapPin className="size-3" /> {c.position}
+              </span>
+            )}
+            {c.monthlySalary != null && (
+              <span className="inline-flex items-center gap-1 font-medium text-ink-2">
+                {cop(c.monthlySalary)}/mes
               </span>
             )}
             <span className="text-faint">

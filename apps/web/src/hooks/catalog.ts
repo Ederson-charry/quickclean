@@ -630,6 +630,7 @@ export interface ContractDTO {
   engagementType: EngagementType;
   contractKind: ContractKind;
   position: string | null;
+  monthlySalary: number | null;
   status: "activo" | "finalizado";
   startDate: string;
   endDate: string | null;
@@ -648,6 +649,7 @@ export interface CreateContractInput {
   engagementType: EngagementType;
   contractKind: ContractKind;
   position?: string;
+  monthlySalary?: number;
 }
 
 export function useContracts(enabled: boolean) {
@@ -685,5 +687,116 @@ export function useFinalizeContract() {
     mutationFn: (id: string) =>
       apiFetch(`/admin/contratos/${id}/finalizar`, { method: "POST", headers: authHeaders() }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["contratos"] }),
+  });
+}
+
+// ─── Nómina (motor de pago employee, conceptos CST) ───────────────────────────
+export interface PayrollContract {
+  id: string;
+  position: string | null;
+  monthlySalary: number | null;
+  contractKind: string;
+  quicker: { id: string; name: string; zone: string };
+  client: { id: string; name: string } | null;
+}
+
+export interface PayrollItem {
+  concepto: string;
+  tipo: "devengado" | "deduccion";
+  monto: number;
+}
+
+export interface PayrollBreakdown {
+  days: number;
+  baseSalary: number;
+  transportAllowance: number;
+  bonuses: number;
+  grossEarnings: number;
+  healthDeduction: number;
+  pensionDeduction: number;
+  otherDeductions: number;
+  totalDeductions: number;
+  netPay: number;
+  items: PayrollItem[];
+}
+
+export interface PayrollExtra {
+  concept: string;
+  kind: "bono" | "deduccion";
+  amount: number;
+}
+
+export interface PayrollRunDTO {
+  id: string;
+  periodFrom: string;
+  periodTo: string;
+  baseSalary: number;
+  transportAllowance: number;
+  grossEarnings: number;
+  totalDeductions: number;
+  netPay: number;
+  status: "calculada" | "pagada";
+  paidAt: string | null;
+  createdAt: string;
+  contract: {
+    position: string | null;
+    quicker: { name: string; zone: string };
+    client: { name: string } | null;
+  };
+}
+
+export interface PayrollInput {
+  contractId: string;
+  periodFrom: string;
+  periodTo: string;
+  extras?: PayrollExtra[];
+}
+
+export function usePayrollContracts(enabled: boolean) {
+  return useQuery({
+    queryKey: ["nomina-contratos"],
+    enabled,
+    queryFn: () => apiFetch<PayrollContract[]>("/admin/nomina/contratos", { headers: authHeaders() }),
+  });
+}
+
+export function usePayrollHistory(enabled: boolean) {
+  return useQuery({
+    queryKey: ["nomina-historial"],
+    enabled,
+    queryFn: () => apiFetch<PayrollRunDTO[]>("/admin/nomina/historial", { headers: authHeaders() }),
+  });
+}
+
+export function usePayrollPreview() {
+  return useMutation({
+    mutationFn: (input: PayrollInput) =>
+      apiFetch<PayrollBreakdown>("/admin/nomina/preview", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify(input),
+      }),
+  });
+}
+
+export function useRunPayroll() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: PayrollInput) =>
+      apiFetch<PayrollRunDTO>("/admin/nomina", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify(input),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["nomina-historial"] }),
+  });
+}
+
+export function useMarkPayrollPaid() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch(`/admin/nomina/${id}/pagar`, { method: "POST", headers: authHeaders() }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["nomina-historial"] }),
   });
 }

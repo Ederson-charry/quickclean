@@ -80,13 +80,45 @@ model WorkContract {
   engagementType EngagementType
   position       String?
   contractKind   String         @default("prestacion") // prestacion | fijo | indefinido
+  /// Salario base mensual (COP). Requerido para liquidar nómina de un employee.
+  monthlySalary  Int?
   status         String         @default("activo") // activo | finalizado
   startDate      DateTime       @default(now())
   endDate        DateTime?
   createdAt      DateTime       @default(now())
+  payrollRuns    PayrollRun[]
 
   @@index([quickerId])
   @@index([clientId])
+}
+
+/// Liquidación de nómina de un employee por período (conceptos CST). QuickClean es
+/// system-of-record; el ERP/GAF emite el pago real. Guarda snapshot del cálculo.
+model PayrollRun {
+  id                String       @id @default(uuid())
+  contractId        String
+  contract          WorkContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  quickerId         String // denormalizado para listar
+  periodFrom        DateTime
+  periodTo          DateTime
+  baseSalary        Int // salario base prorrateado (IBC)
+  transportAllowance Int // auxilio de transporte
+  bonuses           Int // suma de bonos (devengo extra)
+  grossEarnings     Int // total devengado
+  healthDeduction   Int // aporte salud empleado (4%)
+  pensionDeduction  Int // aporte pensión empleado (4%)
+  otherDeductions   Int // otras deducciones
+  totalDeductions   Int
+  netPay            Int // neto a pagar
+  items             Json // detalle de líneas {concepto, tipo, monto}
+  status            String       @default("calculada") // calculada | pagada
+  createdById       String
+  createdAt         DateTime     @default(now())
+  paidAt            DateTime?
+
+  @@index([contractId])
+  @@index([quickerId])
+  @@index([status])
 }
 
 /// Perfil operativo del quicker (vinculado a un User con rol quicker).

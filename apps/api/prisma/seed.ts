@@ -215,9 +215,12 @@ async function main(): Promise<void> {
           engagementType: "employee",
           position: "Operaria de aseo",
           contractKind: "indefinido",
+          monthlySalary: 1_800_000,
           status: "activo",
         },
       });
+    } else if (existing.monthlySalary == null) {
+      await prisma.workContract.update({ where: { id: existing.id }, data: { monthlySalary: 1_800_000 } });
     }
 
     // Solicitud de ausencia de ejemplo (en revisión) para la Torre de Control
