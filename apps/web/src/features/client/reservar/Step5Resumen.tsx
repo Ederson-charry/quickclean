@@ -34,7 +34,7 @@ export function Step5Resumen() {
   const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(null);
 
   if (view === "confirmacion" && confirmedBooking) {
-    return <Confirmacion booking={confirmedBooking} />;
+    return <Confirmacion booking={confirmedBooking} categoryName={data.serviceCategoryName} />;
   }
 
   if (view === "pago") {
@@ -59,7 +59,7 @@ export function Step5Resumen() {
       {/* Service details */}
       <div className="rounded-xl border border-line bg-bg/50 p-4 space-y-3">
         <h3 className="font-semibold text-ink">
-          {SERVICE_LABELS[data.serviceType ?? "hogar"]}
+          {data.serviceCategoryName ?? SERVICE_LABELS[data.serviceType ?? "hogar"]}
         </h3>
 
         <div className="space-y-2 text-sm text-ink-2">
