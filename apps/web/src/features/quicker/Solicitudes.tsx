@@ -7,10 +7,20 @@ import { es } from "date-fns/locale";
 import { CalendarIcon, CheckCircle2, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { useSubmitLeave } from "@/hooks/queries";
+import {
+  type LeaveKind,
+  type LeaveRequestDTO,
+  type LeaveStatus,
+  useMyLeaves,
+  useSubmitLeaveReal,
+} from "@/hooks/catalog";
+import { useSession } from "@/stores/session";
 import { FileDrop } from "@/components/shared/FileDrop";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { LoadingState, EmptyState } from "@/components/shared/States";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -443,29 +453,185 @@ function LicenciaForm() {
   );
 }
 
+// ── Mock demo page (sin sesión real) ────────────────────────────────────────────
+function MockSolicitudes() {
+  return (
+    <Tabs defaultValue="incapacidad" className="w-full">
+      <TabsList className="w-full grid grid-cols-2 mb-6">
+        <TabsTrigger value="incapacidad">Incapacidad</TabsTrigger>
+        <TabsTrigger value="licencia">Licencia</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="incapacidad">
+        <IncapacidadForm />
+      </TabsContent>
+
+      <TabsContent value="licencia">
+        <LicenciaForm />
+      </TabsContent>
+    </Tabs>
+  );
+}
+
+// ── Real: formulario conectado al backend + listado "Mis solicitudes" ────────────
+const LEAVE_KINDS: { value: LeaveKind; label: string; hint: string }[] = [
+  { value: "incapacidad", label: "Incapacidad", hint: "Médica / EPS / ARL" },
+  { value: "licencia", label: "Licencia", hint: "Remunerada o no" },
+  { value: "vacaciones", label: "Vacaciones", hint: "Descanso programado" },
+];
+
+const STATUS_BADGE: Record<LeaveStatus, { label: string; className: string }> = {
+  en_revision: { label: "En revisión", className: "bg-warning/10 text-warning" },
+  aprobada: { label: "Aprobada", className: "bg-success/10 text-success" },
+  rechazada: { label: "Rechazada", className: "bg-danger/10 text-danger" },
+};
+
+const KIND_LABEL: Record<LeaveKind, string> = {
+  incapacidad: "Incapacidad",
+  licencia: "Licencia",
+  vacaciones: "Vacaciones",
+};
+
+function MyLeaveRow({ r }: { r: LeaveRequestDTO }) {
+  const badge = STATUS_BADGE[r.status];
+  const from = new Date(r.startDate);
+  const to = new Date(r.endDate);
+  const days = differenceInDays(to, from) + 1;
+  return (
+    <div className="rounded-xl border border-line bg-surface p-4 shadow-sm">
+      <div className="flex items-center justify-between gap-2">
+        <span className="truncate font-semibold text-ink">{KIND_LABEL[r.kind]}</span>
+        <Badge className={badge.className}>{badge.label}</Badge>
+      </div>
+      <p className="mt-1 text-xs text-faint">
+        {format(from, "d MMM", { locale: es })} – {format(to, "d MMM yyyy", { locale: es })} · {days} día{days !== 1 ? "s" : ""}
+      </p>
+      {r.reason && <p className="mt-1 truncate text-xs text-ink-2">{r.reason}</p>}
+    </div>
+  );
+}
+
+function RealLeaveForm() {
+  const submit = useSubmitLeaveReal();
+  const [kind, setKind] = useState<LeaveKind>("incapacidad");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [reason, setReason] = useState("");
+  const [errors, setErrors] = useState<{ from?: string; to?: string }>({});
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const next: { from?: string; to?: string } = {};
+    if (!from) next.from = "Selecciona la fecha de inicio";
+    if (!to) next.to = "Selecciona la fecha de fin";
+    setErrors(next);
+    if (next.from || next.to) return;
+    try {
+      await submit.mutateAsync({ kind, startDate: from, endDate: to, reason: reason || undefined });
+      toast.success("Solicitud radicada");
+      setFrom(""); setTo(""); setReason("");
+    } catch {
+      toast.error("No se pudo radicar la solicitud");
+    }
+  };
+
+  return (
+    <form onSubmit={onSubmit} noValidate className="space-y-5">
+      <div className="space-y-1.5">
+        <Label>Tipo de solicitud</Label>
+        <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Tipo de solicitud">
+          {LEAVE_KINDS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              role="radio"
+              aria-checked={kind === opt.value}
+              onClick={() => setKind(opt.value)}
+              className={cn(
+                "flex flex-col items-start gap-0.5 rounded-xl border-2 p-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600",
+                kind === opt.value ? "border-brand-600 bg-brand-50" : "border-line bg-surface hover:border-brand-300",
+              )}
+            >
+              <span className={cn("text-sm font-semibold", kind === opt.value ? "text-brand-700" : "text-ink")}>
+                {opt.label}
+              </span>
+              <span className="text-[11px] leading-tight text-faint">{opt.hint}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Período</Label>
+        <DateRangePicker
+          fromValue={from}
+          toValue={to}
+          onFromChange={(v) => setFrom(v)}
+          onToChange={(v) => setTo(v)}
+          fromError={errors.from}
+          toError={errors.to}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="leave-reason">Motivo (opcional)</Label>
+        <Textarea
+          id="leave-reason"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="Información adicional sobre tu solicitud..."
+          className="resize-none border-line"
+          rows={3}
+        />
+      </div>
+
+      <Button type="submit" disabled={submit.isPending} className="h-11 w-full font-semibold" aria-label="Radicar solicitud">
+        {submit.isPending ? (
+          <span className="flex items-center gap-2">
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            Radicando...
+          </span>
+        ) : (
+          "Radicar solicitud"
+        )}
+      </Button>
+    </form>
+  );
+}
+
+function RealSolicitudes() {
+  const leaves = useMyLeaves(true);
+  return (
+    <div className="space-y-6">
+      <RealLeaveForm />
+      <div>
+        <h2 className="mb-3 font-semibold text-ink">Mis solicitudes</h2>
+        {leaves.isLoading && <LoadingState rows={2} />}
+        {!leaves.isLoading && leaves.data?.length === 0 && (
+          <EmptyState title="Sin solicitudes" hint="Aún no has radicado ninguna solicitud." />
+        )}
+        {leaves.data && leaves.data.length > 0 && (
+          <div className="space-y-3">
+            {leaves.data.map((r) => (
+              <MyLeaveRow key={r.id} r={r} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Solicitudes page ──────────────────────────────────────────────────────
 export default function Solicitudes() {
+  const useReal = !!useSession((s) => s.accessToken);
   return (
     <div className="space-y-6">
       <div>
         <h1 className="font-display text-2xl font-bold text-ink">Solicitudes</h1>
-        <p className="mt-0.5 text-sm text-faint">Incapacidades y licencias</p>
+        <p className="mt-0.5 text-sm text-faint">Incapacidades, licencias y vacaciones</p>
       </div>
-
-      <Tabs defaultValue="incapacidad" className="w-full">
-        <TabsList className="w-full grid grid-cols-2 mb-6">
-          <TabsTrigger value="incapacidad">Incapacidad</TabsTrigger>
-          <TabsTrigger value="licencia">Licencia</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="incapacidad">
-          <IncapacidadForm />
-        </TabsContent>
-
-        <TabsContent value="licencia">
-          <LicenciaForm />
-        </TabsContent>
-      </Tabs>
+      {useReal ? <RealSolicitudes /> : <MockSolicitudes />}
     </div>
   );
 }

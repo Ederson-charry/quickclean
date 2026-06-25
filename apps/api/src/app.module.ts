@@ -12,6 +12,7 @@ import { CatalogModule } from "./catalog/catalog.module";
 import { CompensationModule } from "./compensation/compensation.module";
 import { ErpModule } from "./erp/erp.module";
 import { HealthController } from "./health/health.controller";
+import { LeaveModule } from "./leave/leave.module";
 import { MfaModule } from "./mfa/mfa.module";
 import { PrismaService } from "./prisma/prisma.service";
 
@@ -28,6 +29,7 @@ import { PrismaService } from "./prisma/prisma.service";
     AssignmentModule,
     CompensationModule,
     ErpModule,
+    LeaveModule,
     UsersModule,
   ],
   controllers: [HealthController],
