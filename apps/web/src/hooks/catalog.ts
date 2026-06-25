@@ -279,6 +279,66 @@ export function useTransitionBooking() {
   });
 }
 
+// ─── Compensación ─────────────────────────────────────────────────────────────
+export interface PendingCompensation {
+  quickerId: string;
+  name: string;
+  zone: string;
+  amount: number;
+  bookingCount: number;
+}
+
+export interface PayoutRecord {
+  id: string;
+  amount: number;
+  bookingCount: number;
+  status: "pendiente" | "pagado";
+  createdAt: string;
+  paidAt: string | null;
+  quicker?: { name: string; zone: string };
+}
+
+export function usePendingCompensation(enabled: boolean) {
+  return useQuery({
+    queryKey: ["compensacion"],
+    enabled,
+    queryFn: () => apiFetch<PendingCompensation[]>("/admin/compensacion", { headers: authHeaders() }),
+  });
+}
+
+export function useCompensationHistory(enabled: boolean) {
+  return useQuery({
+    queryKey: ["compensacion-historial"],
+    enabled,
+    queryFn: () => apiFetch<PayoutRecord[]>("/admin/compensacion/historial", { headers: authHeaders() }),
+  });
+}
+
+export function useLiquidate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (quickerId: string) =>
+      apiFetch("/admin/compensacion/liquidar", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ quickerId }),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["compensacion"] });
+      qc.invalidateQueries({ queryKey: ["compensacion-historial"] });
+    },
+  });
+}
+
+export function useMarkPaid() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payoutId: string) =>
+      apiFetch(`/admin/compensacion/${payoutId}/pagar`, { method: "POST", headers: authHeaders() }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["compensacion-historial"] }),
+  });
+}
+
 // ─── Panel del quicker ────────────────────────────────────────────────────────
 export interface QuickerBooking {
   id: string;

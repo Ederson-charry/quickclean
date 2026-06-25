@@ -9,6 +9,7 @@ import { AssignmentModule } from "./assignment/assignment.module";
 import { AuthModule } from "./auth/auth.module";
 import { BookingModule } from "./booking/booking.module";
 import { CatalogModule } from "./catalog/catalog.module";
+import { CompensationModule } from "./compensation/compensation.module";
 import { HealthController } from "./health/health.controller";
 import { MfaModule } from "./mfa/mfa.module";
 import { PrismaService } from "./prisma/prisma.service";
@@ -24,6 +25,7 @@ import { PrismaService } from "./prisma/prisma.service";
     CatalogModule,
     BookingModule,
     AssignmentModule,
+    CompensationModule,
     UsersModule,
   ],
   controllers: [HealthController],

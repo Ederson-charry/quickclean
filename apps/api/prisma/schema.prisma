@@ -39,6 +39,7 @@ model Quicker {
   createdAt   DateTime            @default(now())
   skills      QuickerSkill[]
   assignments ServiceAssignment[]
+  payouts     Payout[]
 
   @@index([active])
 }
@@ -54,6 +55,26 @@ model QuickerSkill {
 
   @@unique([quickerId, serviceCategoryId])
   @@index([serviceCategoryId])
+}
+
+/// Liquidación (cuenta de cobro) de un quicker: agrega el payout de sus
+/// servicios completados. QuickClean es system-of-record; GAF/ERP emite nómina.
+model Payout {
+  id           String    @id @default(uuid())
+  quickerId    String
+  quicker      Quicker   @relation(fields: [quickerId], references: [id])
+  amount       Int
+  bookingCount Int
+  status       String    @default("pendiente") // pendiente | pagado
+  periodFrom   DateTime?
+  periodTo     DateTime?
+  createdById  String
+  createdAt    DateTime  @default(now())
+  paidAt       DateTime?
+  bookings     Booking[]
+
+  @@index([quickerId])
+  @@index([status])
 }
 
 /// Asignación de un quicker a una reserva (salida de la Torre de Control).
@@ -99,6 +120,8 @@ model Booking {
   ratingComment     String?
   createdAt         DateTime        @default(now())
   assignment        ServiceAssignment?
+  payoutId          String?
+  payoutLiquidation Payout?         @relation(fields: [payoutId], references: [id])
 
   @@index([clientId])
   @@index([status])

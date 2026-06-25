@@ -13,6 +13,7 @@ const PERMS = [
   "assignment.manage",
   "booking.read",
   "booking.manage",
+  "compensation.manage",
 ];
 
 async function main(): Promise<void> {
