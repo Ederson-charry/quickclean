@@ -12,6 +12,9 @@ export interface Candidate {
   zoneMatch: boolean;
   clash: boolean;
   score: number;
+  /** Cumple la vinculación requerida por el cliente (empresa ⇒ contrato laboral). */
+  eligible: boolean;
+  eligibilityReason?: string;
 }
 
 @Injectable()
@@ -26,10 +29,16 @@ export class AssignmentService {
    * capacidad/skill por categoría, zona, carga actual, rating y choque de agenda.
    */
   async rankCandidates(bookingId: string): Promise<Candidate[]> {
-    const booking = await this.prisma.booking.findUnique({ where: { id: bookingId } });
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { client: { include: { clientProfile: true } } },
+    });
     if (!booking) {
       throw new NotFoundException("Reserva no encontrada");
     }
+    const clientProfile = booking.client?.clientProfile;
+    const requiresDirectHire = clientProfile?.requiresDirectHire ?? false;
+
     const quickers = await this.prisma.quicker.findMany({
       where: { active: true },
       include: { skills: true },
@@ -38,6 +47,25 @@ export class AssignmentService {
     const candidates = await Promise.all(
       quickers.map(async (q) => {
         const hasSkill = q.skills.some((s) => s.serviceCategoryId === booking.serviceCategoryId);
+
+        // Regla empresa → empleado directo (§6.3): cliente que exige contratación
+        // directa solo admite quickers con contrato laboral activo para ese cliente.
+        let eligible = true;
+        let eligibilityReason: string | undefined;
+        if (requiresDirectHire && clientProfile) {
+          const employeeContract = await this.prisma.workContract.findFirst({
+            where: {
+              quickerId: q.id,
+              clientId: clientProfile.id,
+              engagementType: "employee",
+              status: "activo",
+            },
+          });
+          eligible = employeeContract != null;
+          if (!eligible) {
+            eligibilityReason = "el cliente exige contrato laboral directo";
+          }
+        }
         const activeBookings = await this.prisma.booking.findMany({
           where: { quickerId: q.userId, status: { in: ["agendado", "en_curso"] } },
           select: { scheduledAt: true },
@@ -61,11 +89,16 @@ export class AssignmentService {
           zoneMatch,
           clash,
           score: Math.round(score * 100) / 100,
+          eligible,
+          eligibilityReason,
         };
       }),
     );
 
-    return candidates.sort((a, b) => b.score - a.score);
+    // elegibles primero, luego por score
+    return candidates.sort((a, b) =>
+      a.eligible === b.eligible ? b.score - a.score : a.eligible ? -1 : 1,
+    );
   }
 
   /** Asigna (o reasigna) un quicker a la reserva. Auditado con candidatos vs elegido. */
@@ -83,6 +116,12 @@ export class AssignmentService {
     }
 
     const candidates = await this.rankCandidates(bookingId);
+    const chosen = candidates.find((c) => c.quickerId === quickerId);
+    if (chosen && !chosen.eligible) {
+      throw new BadRequestException(
+        "El quicker no cumple la vinculación requerida por el cliente (empresa exige contrato laboral directo)",
+      );
+    }
     const previousQuickerId = booking.quickerId;
 
     const assignment = await this.prisma.$transaction(async (tx) => {
