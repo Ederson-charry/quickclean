@@ -1,6 +1,69 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiFetch } from "@/lib/http";
+import { apiFetch, apiUrl } from "@/lib/http";
 import { useSession } from "@/stores/session";
+
+// ─── Conciliación ERP/GAF ─────────────────────────────────────────────────────
+export interface ReconItem {
+  bookingId: string;
+  scheduledAt: string;
+  client: string | null;
+  service: string | null;
+  quicker: string | null;
+  cobro: number;
+  pago: number;
+  comision: number;
+  liquidacion: "liquidado" | "pendiente";
+}
+
+export interface ReconReport {
+  from: string | null;
+  to: string | null;
+  summary: { count: number; totalCobro: number; totalPago: number; totalComision: number };
+  items: ReconItem[];
+}
+
+function reconAuthHeaders(): Record<string, string> {
+  const token = useSession.getState().accessToken;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+export function useReconciliation(from: string | undefined, to: string | undefined, enabled: boolean) {
+  const p = new URLSearchParams();
+  if (from) p.set("from", from);
+  if (to) p.set("to", to);
+  const qs = p.toString() ? `?${p.toString()}` : "";
+  return useQuery({
+    queryKey: ["conciliacion", from, to],
+    enabled,
+    queryFn: () => apiFetch<ReconReport>(`/admin/conciliacion${qs}`, { headers: reconAuthHeaders() }),
+  });
+}
+
+export async function downloadReconciliation(
+  from: string | undefined,
+  to: string | undefined,
+  format: "csv" | "json",
+): Promise<void> {
+  const p = new URLSearchParams({ format });
+  if (from) p.set("from", from);
+  if (to) p.set("to", to);
+  const res = await fetch(apiUrl(`/admin/conciliacion/export?${p.toString()}`), {
+    credentials: "include",
+    headers: reconAuthHeaders(),
+  });
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `conciliacion.${format}`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
 
 export interface ServiceCategory {
   id: string;
