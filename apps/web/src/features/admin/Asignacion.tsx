@@ -86,12 +86,14 @@ function AssignDialog({ booking, onClose }: { booking: BoardBooking | null; onCl
               <p className="py-4 text-center text-sm text-faint">No hay quickers disponibles.</p>
             ) : (
               <ul className="flex flex-col gap-2">
-                {candidates.map((c, i) => (
+                {candidates.map((c, i) => {
+                  const usable = c.eligible && c.available;
+                  return (
                   <li
                     key={c.quickerId}
                     className={cn(
                       "rounded-lg border p-3",
-                      !c.eligible
+                      !usable
                         ? "border-line bg-bg/40 opacity-70"
                         : i === 0
                         ? "border-brand-300 bg-brand-50/40"
@@ -102,12 +104,17 @@ function AssignDialog({ booking, onClose }: { booking: BoardBooking | null; onCl
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-medium text-ink">{c.name}</span>
-                          {c.eligible && i === 0 && (
+                          {usable && i === 0 && (
                             <Badge className="bg-brand-100 text-brand-700">Sugerido</Badge>
                           )}
                           {!c.eligible && (
                             <Badge className="bg-danger/10 text-danger">
                               No elegible{c.eligibilityReason ? ` · ${c.eligibilityReason}` : ""}
+                            </Badge>
+                          )}
+                          {c.eligible && !c.available && (
+                            <Badge className="bg-warning/10 text-warning">
+                              No disponible{c.unavailableReason ? ` · ${c.unavailableReason}` : ""}
                             </Badge>
                           )}
                         </div>
@@ -136,17 +143,18 @@ function AssignDialog({ booking, onClose }: { booking: BoardBooking | null; onCl
                         <span className="font-mono text-xs tabular-nums text-faint">{c.score}</span>
                         <Button
                           size="sm"
-                          variant={c.eligible && i === 0 ? "default" : "outline"}
-                          className={c.eligible && i === 0 ? "bg-brand-600 text-white hover:bg-brand-700" : ""}
+                          variant={usable && i === 0 ? "default" : "outline"}
+                          className={usable && i === 0 ? "bg-brand-600 text-white hover:bg-brand-700" : ""}
                           onClick={() => doAssign(c.quickerId, c.name)}
-                          disabled={assign.isPending || !c.eligible}
+                          disabled={assign.isPending || !usable}
                         >
-                          {!c.eligible ? "Bloqueado" : i === 0 ? "Confirmar" : "Asignar"}
+                          {!c.eligible ? "Bloqueado" : !c.available ? "No disponible" : i === 0 ? "Confirmar" : "Asignar"}
                         </Button>
                       </div>
                     </div>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             )}
           </>

@@ -15,6 +15,16 @@ export interface Candidate {
   /** Cumple la vinculación requerida por el cliente (empresa ⇒ contrato laboral). */
   eligible: boolean;
   eligibilityReason?: string;
+  /** Sin ausencia aprobada que cubra la fecha del servicio. */
+  available: boolean;
+  unavailableReason?: string;
+}
+
+/** Una ausencia [start, end] (días completos) cubre el instante dado. */
+function leaveCovers(start: Date, end: Date, when: Date): boolean {
+  const endOfLastDay = new Date(end);
+  endOfLastDay.setUTCDate(endOfLastDay.getUTCDate() + 1);
+  return start.getTime() <= when.getTime() && when.getTime() < endOfLastDay.getTime();
 }
 
 @Injectable()
@@ -41,7 +51,7 @@ export class AssignmentService {
 
     const quickers = await this.prisma.quicker.findMany({
       where: { active: true },
-      include: { skills: true },
+      include: { skills: true, leaveRequests: { where: { status: "aprobada" } } },
     });
 
     const candidates = await Promise.all(
@@ -76,6 +86,15 @@ export class AssignmentService {
         );
         const zoneMatch = booking.address.toLowerCase().includes(q.zone.toLowerCase());
 
+        // Disponibilidad: ausencia aprobada que cubra la fecha del servicio (§8.1, agenda).
+        const blockingLeave = q.leaveRequests.find((l) =>
+          leaveCovers(l.startDate, l.endDate, booking.scheduledAt),
+        );
+        const available = blockingLeave == null;
+        const unavailableReason = blockingLeave
+          ? `${blockingLeave.kind} aprobada en esa fecha`
+          : undefined;
+
         const score =
           (hasSkill ? 100 : 0) + q.rating * 4 - load * 12 + (zoneMatch ? 15 : 0) - (clash ? 40 : 0);
 
@@ -91,13 +110,16 @@ export class AssignmentService {
           score: Math.round(score * 100) / 100,
           eligible,
           eligibilityReason,
+          available,
+          unavailableReason,
         };
       }),
     );
 
-    // elegibles primero, luego por score
+    // asignables (elegibles y disponibles) primero, luego por score
+    const usable = (c: Candidate) => c.eligible && c.available;
     return candidates.sort((a, b) =>
-      a.eligible === b.eligible ? b.score - a.score : a.eligible ? -1 : 1,
+      usable(a) === usable(b) ? b.score - a.score : usable(a) ? -1 : 1,
     );
   }
 
@@ -120,6 +142,11 @@ export class AssignmentService {
     if (chosen && !chosen.eligible) {
       throw new BadRequestException(
         "El quicker no cumple la vinculación requerida por el cliente (empresa exige contrato laboral directo)",
+      );
+    }
+    if (chosen && !chosen.available) {
+      throw new BadRequestException(
+        "El quicker tiene una ausencia aprobada que cubre la fecha del servicio",
       );
     }
     const previousQuickerId = booking.quickerId;
