@@ -548,6 +548,8 @@ export interface AssignmentCandidate {
   score: number;
   eligible: boolean;
   eligibilityReason?: string;
+  available: boolean;
+  unavailableReason?: string;
 }
 
 export interface BoardBooking {

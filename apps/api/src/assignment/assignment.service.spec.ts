@@ -129,4 +129,63 @@ describe("AssignmentService (integración) — ranking + asignación", () => {
     await prisma.client.delete({ where: { id: empClient.id } });
     await prisma.user.delete({ where: { id: empUser.id } });
   });
+
+  it("disponibilidad: una ausencia aprobada que cubre la fecha deja al quicker no asignable", async () => {
+    // servicio en una fecha fija; el skilled tiene incapacidad aprobada que la cubre
+    const day = new Date("2026-09-10T14:00:00.000Z");
+    const leaveBooking = await prisma.booking.create({
+      data: {
+        clientId, serviceCategoryId: categoryId, tariffId,
+        duration: 4, frequency: "unica", size: "S", supplies: false,
+        scheduledAt: day, address: "Calle Chapinero",
+        priceLabor: 80_000, priceTotal: 86_900, payout: 56_000, status: "agendado",
+      },
+    });
+    await prisma.leaveRequest.create({
+      data: {
+        quickerId: skilledQuickerId, kind: "incapacidad",
+        startDate: new Date("2026-09-09T00:00:00.000Z"),
+        endDate: new Date("2026-09-11T00:00:00.000Z"),
+        status: "aprobada",
+      },
+    });
+
+    const ranked = await svc.rankCandidates(leaveBooking.id);
+    const skilled = ranked.find((c) => c.quickerId === skilledQuickerId)!;
+    const plain = ranked.find((c) => c.quickerId === plainQuickerId)!;
+    expect(skilled.available).toBe(false);
+    expect(skilled.unavailableReason).toContain("incapacidad");
+    expect(plain.available).toBe(true);
+    // aunque tenga más score por skill, el no-disponible queda detrás del disponible
+    const idxPlain = ranked.findIndex((c) => c.quickerId === plainQuickerId);
+    const idxSkilled = ranked.findIndex((c) => c.quickerId === skilledQuickerId);
+    expect(idxPlain).toBeLessThan(idxSkilled);
+    // asignar al no-disponible falla
+    await expect(svc.assign(leaveBooking.id, skilledQuickerId, clientId)).rejects.toThrow();
+
+    // una solicitud solo en revisión NO bloquea
+    const pendingBooking = await prisma.booking.create({
+      data: {
+        clientId, serviceCategoryId: categoryId, tariffId,
+        duration: 4, frequency: "unica", size: "S", supplies: false,
+        scheduledAt: new Date("2026-12-01T14:00:00.000Z"), address: "Calle Chapinero",
+        priceLabor: 80_000, priceTotal: 86_900, payout: 56_000, status: "agendado",
+      },
+    });
+    await prisma.leaveRequest.create({
+      data: {
+        quickerId: skilledQuickerId, kind: "vacaciones",
+        startDate: new Date("2026-11-30T00:00:00.000Z"),
+        endDate: new Date("2026-12-02T00:00:00.000Z"),
+        status: "en_revision",
+      },
+    });
+    const ranked2 = await svc.rankCandidates(pendingBooking.id);
+    expect(ranked2.find((c) => c.quickerId === skilledQuickerId)!.available).toBe(true);
+
+    // limpieza local
+    await prisma.leaveRequest.deleteMany({ where: { quickerId: skilledQuickerId } });
+    await prisma.serviceAssignment.deleteMany({ where: { bookingId: { in: [leaveBooking.id, pendingBooking.id] } } });
+    await prisma.booking.deleteMany({ where: { id: { in: [leaveBooking.id, pendingBooking.id] } } });
+  });
 });
