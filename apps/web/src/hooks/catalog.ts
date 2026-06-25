@@ -279,6 +279,63 @@ export function useTransitionBooking() {
   });
 }
 
+// ─── Torre de Control / asignación ────────────────────────────────────────────
+export interface AssignmentCandidate {
+  quickerId: string;
+  name: string;
+  zone: string;
+  rating: number;
+  hasSkill: boolean;
+  load: number;
+  zoneMatch: boolean;
+  clash: boolean;
+  score: number;
+}
+
+export interface BoardBooking {
+  id: string;
+  scheduledAt: string;
+  status: "agendado" | "en_curso" | "completado" | "cancelado";
+  address: string;
+  duration: number;
+  priceTotal: number;
+  category?: { name: string };
+  client?: { email: string };
+  assignment?: { quicker: { name: string; zone: string } } | null;
+}
+
+export function useAssignmentBoard(enabled: boolean) {
+  return useQuery({
+    queryKey: ["asignacion"],
+    enabled,
+    queryFn: () => apiFetch<BoardBooking[]>("/admin/asignacion", { headers: authHeaders() }),
+  });
+}
+
+export function useCandidates(bookingId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: ["candidatos", bookingId],
+    enabled: enabled && !!bookingId,
+    queryFn: () =>
+      apiFetch<AssignmentCandidate[]>(`/admin/asignacion/candidatos?bookingId=${bookingId}`, {
+        headers: authHeaders(),
+      }),
+  });
+}
+
+export function useAssign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { bookingId: string; quickerId: string; reason?: string }) =>
+      apiFetch("/admin/asignacion", { method: "POST", headers: authHeaders(), body: JSON.stringify(input) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["asignacion"] });
+      qc.invalidateQueries({ queryKey: ["candidatos"] });
+      qc.invalidateQueries({ queryKey: ["admin-reservas"] });
+    },
+  });
+}
+
 /** Reservas (admin, requiere booking.read), filtrable por estado. */
 export function useAdminReservations(status: string, enabled: boolean) {
   return useQuery({
