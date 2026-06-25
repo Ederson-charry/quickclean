@@ -620,3 +620,70 @@ export function usePricePreview(input: PreviewInput | null) {
       }),
   });
 }
+
+// ─── Contratos (vinculación laboral) ──────────────────────────────────────────
+export type EngagementType = "contractor" | "employee";
+export type ContractKind = "prestacion" | "fijo" | "indefinido";
+
+export interface ContractDTO {
+  id: string;
+  engagementType: EngagementType;
+  contractKind: ContractKind;
+  position: string | null;
+  status: "activo" | "finalizado";
+  startDate: string;
+  endDate: string | null;
+  quicker: { id: string; name: string; zone: string };
+  client: { id: string; name: string; kind: string } | null;
+}
+
+export interface ContractOptions {
+  quickers: { id: string; name: string; zone: string }[];
+  clients: { id: string; name: string; kind: string; requiresDirectHire: boolean }[];
+}
+
+export interface CreateContractInput {
+  quickerId: string;
+  clientId?: string;
+  engagementType: EngagementType;
+  contractKind: ContractKind;
+  position?: string;
+}
+
+export function useContracts(enabled: boolean) {
+  return useQuery({
+    queryKey: ["contratos"],
+    enabled,
+    queryFn: () => apiFetch<ContractDTO[]>("/admin/contratos", { headers: authHeaders() }),
+  });
+}
+
+export function useContractOptions(enabled: boolean) {
+  return useQuery({
+    queryKey: ["contratos-opciones"],
+    enabled,
+    queryFn: () => apiFetch<ContractOptions>("/admin/contratos/opciones", { headers: authHeaders() }),
+  });
+}
+
+export function useCreateContract() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateContractInput) =>
+      apiFetch<ContractDTO>("/admin/contratos", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify(input),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["contratos"] }),
+  });
+}
+
+export function useFinalizeContract() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch(`/admin/contratos/${id}/finalizar`, { method: "POST", headers: authHeaders() }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["contratos"] }),
+  });
+}
