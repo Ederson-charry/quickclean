@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { AuditService } from "../audit/audit.service";
 import { generateTempPassword } from "../common/temp-password";
+import { NotificationService } from "../notifications/notification.service";
 import { PasswordService } from "../auth/password.service";
 import { PrismaService } from "../prisma/prisma.service";
 import type {
@@ -16,7 +17,23 @@ export class StaffService {
     private readonly prisma: PrismaService,
     private readonly password: PasswordService,
     private readonly audit: AuditService,
+    private readonly notifications: NotificationService,
   ) {}
+
+  private welcome(userId: string, email: string, role: "quicker" | "cliente", tempPassword: string) {
+    return this.notifications
+      .send({
+        userId,
+        to: email,
+        kind: "welcome",
+        subject: "Bienvenido a QuickClean",
+        body:
+          `Se creó tu cuenta de ${role} en QuickClean.\n` +
+          `Usuario: ${email}\nContraseña temporal: ${tempPassword}\n\n` +
+          "Por seguridad, deberás crear una contraseña nueva en tu primer ingreso.",
+      })
+      .catch(() => undefined);
+  }
 
   private async roleId(key: string, name: string): Promise<string> {
     const role = await this.prisma.role.upsert({
@@ -77,6 +94,7 @@ export class StaffService {
       resourceId: quicker.id,
       metadata: { email: input.email, zone: input.zone, skills: input.skills.length },
     });
+    await this.welcome(quicker.userId, input.email, "quicker", tempPassword);
 
     return { quicker, tempPassword };
   }
@@ -157,6 +175,7 @@ export class StaffService {
       resourceId: client.id,
       metadata: { email: input.email, kind: input.kind },
     });
+    await this.welcome(client.userId, input.email, "cliente", tempPassword);
 
     return { client, tempPassword };
   }

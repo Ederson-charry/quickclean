@@ -1,12 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AuditService } from "../audit/audit.service";
+import { NotificationService } from "../notifications/notification.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { BookingService } from "./booking.service";
 import { CreateBookingInput } from "./booking.schemas";
 
 describe("BookingService (integración) — snapshot de tarifa", () => {
   const prisma = new PrismaService();
-  const bookings = new BookingService(prisma, new AuditService(prisma));
+  const bookings = new BookingService(prisma, new AuditService(prisma), new NotificationService(prisma));
   let categoryId: string;
   let clientId: string;
   let tariffV1Id: string;

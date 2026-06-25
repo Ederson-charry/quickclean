@@ -1,5 +1,5 @@
 import { Outlet, Link, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Users, UserRound, CreditCard, FileText, ShieldCheck, Tag, Sparkles, CalendarCheck, ClipboardList, Banknote, FileSpreadsheet, CalendarClock, FileSignature, Receipt, Menu, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, UserRound, CreditCard, FileText, ShieldCheck, Tag, Sparkles, CalendarCheck, ClipboardList, Banknote, FileSpreadsheet, CalendarClock, FileSignature, Receipt, Bell, Menu, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import {
@@ -39,6 +39,7 @@ const NAV: NavItem[] = [
   { to: "/admin/conciliacion", label: "Conciliación GAF", icon: FileSpreadsheet, exact: false, perm: "erp.read" },
   { to: "/admin/servicios", label: "Servicios", icon: Sparkles, exact: false, perm: "service.read" },
   { to: "/admin/tarifas", label: "Tarifas", icon: Tag, exact: false, perm: "tariff.read" },
+  { to: "/admin/notificaciones", label: "Notificaciones", icon: Bell, exact: false, perm: "audit.read" },
   { to: "/admin/auditoria", label: "Auditoría", icon: ShieldCheck, exact: false, perm: "audit.read" },
 ];
 

@@ -1,6 +1,11 @@
 import { Body, Controller, Get, HttpCode, Post, Req, Res, UseGuards } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
-import { ForcedPasswordChangeInput, LoginInput } from "@quickclean/shared";
+import {
+  ForcedPasswordChangeInput,
+  LoginInput,
+  RecoverPasswordInput,
+  ResetPasswordInput,
+} from "@quickclean/shared";
 import type { Request, Response } from "express";
 import { CurrentUser, type AuthUser } from "../common/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
@@ -52,6 +57,29 @@ export class AuthController {
     });
     res.cookie(REFRESH_COOKIE, tokens.refreshToken, refreshCookieOptions);
     return { accessToken: tokens.accessToken };
+  }
+
+  // Solicitud de restablecimiento. Respuesta uniforme (anti-enumeración).
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post("recuperar")
+  @HttpCode(200)
+  async recover(@Body() body: unknown, @Req() req: Request) {
+    const input = RecoverPasswordInput.parse(body);
+    await this.auth.requestPasswordReset(input.email, { ip: req.ip, userAgent: req.headers["user-agent"] });
+    return { ok: true };
+  }
+
+  // Restablecimiento con token de un solo uso.
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post("restablecer")
+  @HttpCode(200)
+  async reset(@Body() body: unknown, @Req() req: Request) {
+    const input = ResetPasswordInput.parse(body);
+    await this.auth.resetPassword(input.token, input.newPassword, {
+      ip: req.ip,
+      userAgent: req.headers["user-agent"],
+    });
+    return { ok: true };
   }
 
   @Post("refresh")

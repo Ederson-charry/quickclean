@@ -21,3 +21,14 @@ export const ForcedPasswordChangeInput = z.object({
   newPassword: z.string().min(12),
 });
 export type ForcedPasswordChangeInput = z.infer<typeof ForcedPasswordChangeInput>;
+
+/** Solicitud de restablecimiento de contraseña (envía enlace por correo). */
+export const RecoverPasswordInput = z.object({ email: z.email() });
+export type RecoverPasswordInput = z.infer<typeof RecoverPasswordInput>;
+
+/** Restablecimiento con token de un solo uso. */
+export const ResetPasswordInput = z.object({
+  token: z.string().min(10),
+  newPassword: z.string().min(12),
+});
+export type ResetPasswordInput = z.infer<typeof ResetPasswordInput>;

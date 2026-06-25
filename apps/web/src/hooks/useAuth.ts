@@ -62,5 +62,15 @@ export function useAuth() {
     return establishSession(res.accessToken, input.email);
   }
 
-  return { login, changePassword };
+  /** Solicita el enlace de restablecimiento (respuesta uniforme). */
+  async function recover(email: string): Promise<void> {
+    await apiFetch("/auth/recuperar", { method: "POST", body: JSON.stringify({ email }) });
+  }
+
+  /** Restablece la contraseña con el token recibido por correo. */
+  async function reset(token: string, newPassword: string): Promise<void> {
+    await apiFetch("/auth/restablecer", { method: "POST", body: JSON.stringify({ token, newPassword }) });
+  }
+
+  return { login, changePassword, recover, reset };
 }

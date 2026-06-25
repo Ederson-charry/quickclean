@@ -901,3 +901,24 @@ export function useUpdateClient() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-clients"] }),
   });
 }
+
+// ─── Notificaciones (bandeja de salida) ───────────────────────────────────────
+export interface NotificationDTO {
+  id: string;
+  userId: string | null;
+  channel: "email" | "sms";
+  to: string;
+  kind: string;
+  subject: string;
+  body: string;
+  status: string;
+  createdAt: string;
+}
+
+export function useNotifications(enabled: boolean) {
+  return useQuery({
+    queryKey: ["notificaciones"],
+    enabled,
+    queryFn: () => apiFetch<NotificationDTO[]>("/admin/notificaciones", { headers: authHeaders() }),
+  });
+}
