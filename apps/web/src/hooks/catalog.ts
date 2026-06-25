@@ -423,6 +423,32 @@ export function useQuickerBookings(enabled: boolean) {
   });
 }
 
+export interface QuickerMovement {
+  id: string;
+  date: string;
+  service: string | null;
+  amount: number;
+  estado: "por_liquidar" | "por_pagar" | "pagado";
+}
+
+export interface QuickerWallet {
+  servicios: number;
+  porLiquidar: number;
+  porPagar: number;
+  pagado: number;
+  disponible: number;
+  total: number;
+  movements: QuickerMovement[];
+}
+
+export function useQuickerWallet(enabled: boolean) {
+  return useQuery({
+    queryKey: ["quicker-balance"],
+    enabled,
+    queryFn: () => apiFetch<QuickerWallet>("/quicker/balance", { headers: authHeaders() }),
+  });
+}
+
 export function useQuickerTransition() {
   const qc = useQueryClient();
   return useMutation({

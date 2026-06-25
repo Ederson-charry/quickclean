@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Wallet, FileText, AlertCircle, Briefcase, Clock, Star } from "lucide-react";
 import { toast } from "sonner";
 import { useQuickerToday, useQuickerBalance } from "@/hooks/queries";
-import { type QuickerBooking, useQuickerBookings, useQuickerTransition } from "@/hooks/catalog";
+import { type QuickerBooking, useQuickerBookings, useQuickerTransition, useQuickerWallet } from "@/hooks/catalog";
 import { AssignmentCard } from "@/components/shared/AssignmentCard";
 import { StatPill } from "@/components/shared/StatPill";
 import { Badge } from "@/components/ui/badge";
@@ -59,6 +59,10 @@ export default function Hoy() {
   const realQ = useQuickerBookings(useReal);
   const today = useQuickerToday();
   const balanceQ = useQuickerBalance();
+  const walletQ = useQuickerWallet(useReal);
+  const mainLabel = useReal ? "Por cobrar" : "Balance del día";
+  const mainAmount = useReal ? walletQ.data?.disponible : balanceQ.data?.today;
+  const available = useReal ? walletQ.data?.disponible : balanceQ.data?.available;
 
   const realServices = realQ.data;
   const count = useReal ? realServices?.length : today.data?.length;
@@ -78,12 +82,8 @@ export default function Hoy() {
         <div className="pointer-events-none absolute -right-8 -top-8 h-36 w-36 rounded-full bg-white/10" />
         <div className="pointer-events-none absolute -bottom-6 -right-2 h-24 w-24 rounded-full bg-white/5" />
 
-        <p className="text-sm font-medium text-white/70">Balance del día</p>
-        {balanceQ.isLoading ? (
-          <div className="mt-1 h-10 w-40 animate-pulse rounded-lg bg-white/20" />
-        ) : balanceQ.data ? (
-          <p className="mt-1 font-display text-4xl font-bold tracking-tight">{cop(balanceQ.data.today)}</p>
-        ) : null}
+        <p className="text-sm font-medium text-white/70">{mainLabel}</p>
+        <p className="mt-1 font-display text-4xl font-bold tracking-tight">{cop(mainAmount ?? 0)}</p>
 
         <div className="mt-5 flex flex-wrap gap-2">
           <StatPill icon={Briefcase} value={count ?? 0} label="Servicios" />
@@ -136,13 +136,13 @@ export default function Hoy() {
         )}
       </div>
 
-      {/* Balance teaser (demo) */}
-      {balanceQ.data && (
+      {/* Balance teaser */}
+      {available != null && (
         <div className="rounded-xl border border-line bg-surface p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-ink-2">Disponible para retirar</p>
-              <p className="mt-0.5 text-xl font-bold text-ink">{cop(balanceQ.data.available)}</p>
+              <p className="text-sm text-ink-2">{useReal ? "Por cobrar" : "Disponible para retirar"}</p>
+              <p className="mt-0.5 text-xl font-bold text-ink">{cop(available)}</p>
             </div>
             <Link
               to="/pro/balance"

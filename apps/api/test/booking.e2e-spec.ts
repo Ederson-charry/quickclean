@@ -31,4 +31,8 @@ describe("Reservas (e2e)", () => {
   it("GET /quicker/reservas sin token → 401", () => {
     return request(app.getHttpServer()).get("/quicker/reservas").expect(401);
   });
+
+  it("GET /quicker/balance sin token → 401", () => {
+    return request(app.getHttpServer()).get("/quicker/balance").expect(401);
+  });
 });

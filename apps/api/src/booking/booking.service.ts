@@ -86,6 +86,46 @@ export class BookingService {
     });
   }
 
+  /** Balance del quicker: lo ganado por sus servicios completados, por estado de pago. */
+  async quickerBalance(quickerUserId: string) {
+    const bookings = await this.prisma.booking.findMany({
+      where: { quickerId: quickerUserId, status: "completado" },
+      orderBy: { scheduledAt: "desc" },
+      include: {
+        category: { select: { name: true } },
+        payoutLiquidation: { select: { status: true } },
+      },
+    });
+
+    let porLiquidar = 0;
+    let porPagar = 0;
+    let pagado = 0;
+    const movements = bookings.map((b) => {
+      let estado: "por_liquidar" | "por_pagar" | "pagado";
+      if (!b.payoutId) {
+        porLiquidar += b.payout;
+        estado = "por_liquidar";
+      } else if (b.payoutLiquidation?.status === "pagado") {
+        pagado += b.payout;
+        estado = "pagado";
+      } else {
+        porPagar += b.payout;
+        estado = "por_pagar";
+      }
+      return { id: b.id, date: b.scheduledAt, service: b.category?.name ?? null, amount: b.payout, estado };
+    });
+
+    return {
+      servicios: bookings.length,
+      porLiquidar,
+      porPagar,
+      pagado,
+      disponible: porLiquidar + porPagar,
+      total: porLiquidar + porPagar + pagado,
+      movements,
+    };
+  }
+
   /** Reservas activas asignadas a un quicker (su panel "Hoy"). */
   listForQuicker(quickerUserId: string) {
     return this.prisma.booking.findMany({

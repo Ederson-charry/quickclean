@@ -1,10 +1,13 @@
 import { ArrowDownToLine, TrendingUp, ArrowUpRight, ArrowDownLeft, Minus } from "lucide-react";
 import { toast } from "sonner";
 import { useQuickerBalance } from "@/hooks/queries";
+import { type QuickerMovement, useQuickerWallet } from "@/hooks/catalog";
 import { LoadingState, ErrorState, EmptyState } from "@/components/shared/States";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cop } from "@/lib/format";
+import { cop, fechaCorta } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useSession } from "@/stores/session";
 
 type MovementKind = "ingreso" | "retiro" | "descuento";
 
@@ -13,13 +16,11 @@ const KIND_ICON: Record<MovementKind, typeof ArrowUpRight> = {
   retiro: ArrowDownLeft,
   descuento: Minus,
 };
-
 const KIND_CLASS: Record<MovementKind, string> = {
   ingreso: "text-success",
   retiro: "text-danger",
   descuento: "text-warning",
 };
-
 const KIND_BG: Record<MovementKind, string> = {
   ingreso: "bg-success/10",
   retiro: "bg-danger/10",
@@ -37,35 +38,37 @@ function KindIcon({ kind }: { kind: string }) {
   );
 }
 
-export default function Balance() {
-  const { data, isLoading, isError, refetch } = useQuickerBalance();
+const MOV_BADGE: Record<QuickerMovement["estado"], { cls: string; label: string }> = {
+  pagado: { cls: "bg-success/10 text-success", label: "Pagado" },
+  por_pagar: { cls: "bg-amber-500/10 text-amber-600", label: "Liquidado" },
+  por_liquidar: { cls: "bg-bg text-faint", label: "Por liquidar" },
+};
 
-  const handleWithdraw = () => {
-    toast.info("Retiro solicitado", {
-      description: "El dinero llegará a tu cuenta en 1–2 días hábiles.",
-    });
-  };
+function handleWithdraw() {
+  toast.info("Retiro solicitado", { description: "El dinero llegará a tu cuenta en 1–2 días hábiles." });
+}
 
+// ─── Balance real (desde los payouts del backend) ─────────────────────────────
+function RealBalance() {
+  const { data, isLoading, isError, refetch } = useQuickerWallet(true);
   if (isLoading) return <LoadingState rows={4} />;
-  if (isError) return <ErrorState onRetry={refetch} />;
-  if (!data) return null;
+  if (isError || !data) return <ErrorState onRetry={() => refetch()} />;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="font-display text-2xl font-bold text-ink">Mi balance</h1>
-        <p className="mt-0.5 text-sm text-faint">Ganancias y movimientos</p>
+        <p className="mt-0.5 text-sm text-faint">Ganancias por tus servicios completados</p>
       </div>
 
-      {/* Available + Retirar */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 to-brand-700 p-6 shadow-md">
         <div className="pointer-events-none absolute -right-6 -top-6 h-32 w-32 rounded-full bg-white/10" />
-        <p className="text-sm font-medium text-white/70">Disponible para retirar</p>
-        <p className="mt-1 font-display text-4xl font-bold text-white">{cop(data.available)}</p>
+        <p className="text-sm font-medium text-white/70">Por cobrar</p>
+        <p className="mt-1 font-display text-4xl font-bold text-white">{cop(data.disponible)}</p>
         <Button
-          className="mt-5 gap-2 bg-white !text-brand-700 hover:bg-brand-50 font-semibold"
+          className="mt-5 gap-2 bg-white !text-brand-700 font-semibold hover:bg-brand-50"
           onClick={handleWithdraw}
+          disabled={data.disponible === 0}
           aria-label="Solicitar retiro de fondos"
         >
           <ArrowDownToLine className="h-4 w-4" />
@@ -73,34 +76,86 @@ export default function Balance() {
         </Button>
       </div>
 
-      {/* Today / Week cards */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <div className="rounded-xl border border-line bg-surface p-4">
-          <div className="flex items-center gap-2 text-sm text-ink-2">
-            <TrendingUp className="h-4 w-4 text-brand-600" />
-            Hoy
-          </div>
-          <p className="mt-2 text-xl font-bold text-ink">{cop(data.today)}</p>
-          <p className="mt-0.5 text-xs text-ink-2 font-medium">Ganado hoy</p>
+          <div className="flex items-center gap-2 text-sm text-ink-2"><TrendingUp className="h-4 w-4 text-success" /> Pagado</div>
+          <p className="mt-2 text-lg font-bold tabular-nums text-ink">{cop(data.pagado)}</p>
         </div>
         <div className="rounded-xl border border-line bg-surface p-4">
-          <div className="flex items-center gap-2 text-sm text-ink-2">
-            <TrendingUp className="h-4 w-4 text-success" />
-            Semana
-          </div>
-          <p className="mt-2 text-xl font-bold text-ink">{cop(data.week)}</p>
-          <p className="mt-0.5 text-xs text-ink-2 font-medium">Esta semana</p>
+          <div className="flex items-center gap-2 text-sm text-ink-2"><TrendingUp className="h-4 w-4 text-brand-600" /> Total</div>
+          <p className="mt-2 text-lg font-bold tabular-nums text-ink">{cop(data.total)}</p>
+        </div>
+        <div className="rounded-xl border border-line bg-surface p-4">
+          <div className="flex items-center gap-2 text-sm text-ink-2"><TrendingUp className="h-4 w-4 text-ink-2" /> Servicios</div>
+          <p className="mt-2 text-lg font-bold tabular-nums text-ink">{data.servicios}</p>
         </div>
       </div>
 
-      {/* Movement history */}
+      <div>
+        <h2 className="mb-3 font-semibold text-ink">Historial de servicios</h2>
+        {data.movements.length === 0 ? (
+          <EmptyState title="Sin movimientos aún" hint="Aquí verás el pago de cada servicio completado." />
+        ) : (
+          <div className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface">
+            {data.movements.map((m) => (
+              <div key={m.id} className="flex items-center gap-3 px-4 py-3">
+                <KindIcon kind="ingreso" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-ink">{m.service ?? "Servicio"}</p>
+                  <p className="mt-0.5 text-xs text-ink-2">{fechaCorta(m.date)}</p>
+                </div>
+                <Badge className={MOV_BADGE[m.estado].cls}>{MOV_BADGE[m.estado].label}</Badge>
+                <p className="shrink-0 text-sm font-semibold tabular-nums text-success">+{cop(m.amount)}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Balance demo (mock) ──────────────────────────────────────────────────────
+function MockBalance() {
+  const { data, isLoading, isError, refetch } = useQuickerBalance();
+  if (isLoading) return <LoadingState rows={4} />;
+  if (isError) return <ErrorState onRetry={refetch} />;
+  if (!data) return null;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="font-display text-2xl font-bold text-ink">Mi balance</h1>
+        <p className="mt-0.5 text-sm text-faint">Ganancias y movimientos</p>
+      </div>
+
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 to-brand-700 p-6 shadow-md">
+        <div className="pointer-events-none absolute -right-6 -top-6 h-32 w-32 rounded-full bg-white/10" />
+        <p className="text-sm font-medium text-white/70">Disponible para retirar</p>
+        <p className="mt-1 font-display text-4xl font-bold text-white">{cop(data.available)}</p>
+        <Button className="mt-5 gap-2 bg-white !text-brand-700 font-semibold hover:bg-brand-50" onClick={handleWithdraw}>
+          <ArrowDownToLine className="h-4 w-4" />
+          Retirar
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-xl border border-line bg-surface p-4">
+          <div className="flex items-center gap-2 text-sm text-ink-2"><TrendingUp className="h-4 w-4 text-brand-600" /> Hoy</div>
+          <p className="mt-2 text-xl font-bold text-ink">{cop(data.today)}</p>
+        </div>
+        <div className="rounded-xl border border-line bg-surface p-4">
+          <div className="flex items-center gap-2 text-sm text-ink-2"><TrendingUp className="h-4 w-4 text-success" /> Semana</div>
+          <p className="mt-2 text-xl font-bold text-ink">{cop(data.week)}</p>
+        </div>
+      </div>
+
       <div>
         <h2 className="mb-3 font-semibold text-ink">Historial de movimientos</h2>
-
         {data.history.length === 0 ? (
           <EmptyState title="Sin movimientos aún" hint="Aquí verás tus ingresos y retiros." />
         ) : (
-          <div className="divide-y divide-line rounded-xl border border-line bg-surface overflow-hidden">
+          <div className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface">
             {data.history.map((item, i) => {
               const isPositive = item.amount > 0;
               return (
@@ -110,13 +165,7 @@ export default function Balance() {
                     <p className="truncate text-sm font-medium text-ink">{item.label}</p>
                     <p className="mt-0.5 text-xs capitalize text-ink-2">{item.kind}</p>
                   </div>
-                  <p
-                    className={cn(
-                      "shrink-0 text-sm font-semibold",
-                      isPositive ? "text-success" : "text-danger",
-                    )}
-                    aria-label={`${isPositive ? "Ingreso" : "Descuento"}: ${cop(Math.abs(item.amount))}`}
-                  >
+                  <p className={cn("shrink-0 text-sm font-semibold", isPositive ? "text-success" : "text-danger")}>
                     {isPositive ? "+" : "−"}{cop(Math.abs(item.amount))}
                   </p>
                 </div>
@@ -127,4 +176,9 @@ export default function Balance() {
       </div>
     </div>
   );
+}
+
+export default function Balance() {
+  const useReal = !!useSession((s) => s.accessToken);
+  return useReal ? <RealBalance /> : <MockBalance />;
 }
