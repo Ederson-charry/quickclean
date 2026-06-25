@@ -35,9 +35,10 @@ const ROLE_HOME: Record<Role, string> = {
 
 export default function Login() {
   const { login } = useSession();
-  const { login: apiLogin, changePassword } = useAuth();
+  const { login: apiLogin, changePassword, recover } = useAuth();
   const navigate = useNavigate();
   const [forceChange, setForceChange] = useState<{ email: string; current: string } | null>(null);
+  const [recoverMode, setRecoverMode] = useState(false);
 
   const {
     register,
@@ -118,8 +119,12 @@ export default function Login() {
             </p>
           </div>
 
-          {/* Cambio de contraseña forzado (primer ingreso) */}
-          {forceChange ? (
+          {/* Recuperación de contraseña */}
+          {recoverMode ? (
+            <div className="animate-rise" style={{ animationDelay: "0.2s" }}>
+              <RecoverForm recover={recover} onBack={() => setRecoverMode(false)} />
+            </div>
+          ) : forceChange ? (
             <div className="animate-rise" style={{ animationDelay: "0.2s" }}>
               <ForceChangeForm
                 email={forceChange.email}
@@ -180,6 +185,13 @@ export default function Login() {
               >
                 {isSubmitting ? "Ingresando..." : "Ingresar"}
               </Button>
+              <button
+                type="button"
+                onClick={() => setRecoverMode(true)}
+                className="mt-1 w-full text-center text-sm text-white/70 underline underline-offset-2 hover:text-white min-h-[36px]"
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
             </form>
 
             {/* Decorative social buttons */}
@@ -239,6 +251,78 @@ export default function Login() {
         </div>
       </div>
     </div>
+  );
+}
+
+// ── Formulario de recuperación de contraseña ────────────────────────────────────
+const recoverSchema = z.object({ email: z.string().email("Correo inválido") });
+type RecoverFormValues = z.infer<typeof recoverSchema>;
+
+function RecoverForm({
+  recover,
+  onBack,
+}: {
+  recover: (email: string) => Promise<void>;
+  onBack: () => void;
+}) {
+  const [sent, setSent] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<RecoverFormValues>({ resolver: zodResolver(recoverSchema) });
+
+  const onSubmit = async (data: RecoverFormValues) => {
+    try {
+      await recover(data.email);
+      setSent(true);
+    } catch {
+      // respuesta uniforme: igual mostramos el mensaje de éxito (anti-enumeración)
+      setSent(true);
+    }
+  };
+
+  if (sent) {
+    return (
+      <div className="space-y-4 text-center">
+        <p className="text-sm text-white/85">
+          Si el correo está registrado, te enviamos un enlace para restablecer tu contraseña. Revisa tu bandeja de
+          entrada.
+        </p>
+        <button type="button" onClick={onBack} className="text-sm font-semibold text-white underline underline-offset-2 hover:text-white/80 min-h-[40px]">
+          Volver al inicio de sesión
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <p className="text-sm text-white/80">
+        Ingresa tu correo y te enviaremos un enlace para crear una contraseña nueva.
+      </p>
+      <div className="space-y-1.5">
+        <Label htmlFor="recover-email" className="text-white/90 text-sm font-medium">
+          Correo electrónico
+        </Label>
+        <Input
+          id="recover-email"
+          type="email"
+          placeholder="tu@correo.com"
+          autoComplete="email"
+          {...register("email")}
+          aria-invalid={!!errors.email}
+          className="bg-white/15 border-white/25 text-white placeholder:text-white/45 focus:border-white/60 focus:bg-white/20"
+        />
+        {errors.email && <p className="text-xs text-red-300">{errors.email.message}</p>}
+      </div>
+      <Button type="submit" className="w-full bg-white !text-brand-700 font-semibold hover:bg-white/90 mt-1" disabled={isSubmitting}>
+        {isSubmitting ? "Enviando..." : "Enviar enlace"}
+      </Button>
+      <button type="button" onClick={onBack} className="w-full text-center text-sm text-white/70 underline underline-offset-2 hover:text-white min-h-[40px]">
+        Volver
+      </button>
+    </form>
   );
 }
 

@@ -1,12 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AuditService } from "../audit/audit.service";
 import { PasswordService } from "../auth/password.service";
+import { NotificationService } from "../notifications/notification.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { StaffService } from "./staff.service";
 
 describe("StaffService (integración) — alta de quickers y clientes", () => {
   const prisma = new PrismaService();
-  const svc = new StaffService(prisma, new PasswordService(), new AuditService(prisma));
+  const svc = new StaffService(prisma, new PasswordService(), new AuditService(prisma), new NotificationService(prisma));
   const ts = Date.now();
   const qEmail = `staff-q-${ts}@x.co`;
   const cEmail = `staff-c-${ts}@x.co`;

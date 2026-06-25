@@ -37,6 +37,7 @@ function withSuspense<T extends object>(Component: React.ComponentType<T>) {
 // Auth screens — lazy
 const Login = withSuspense(lazy(() => import("@/features/auth/Login")));
 const Registro = withSuspense(lazy(() => import("@/features/auth/Registro")));
+const ResetPassword = withSuspense(lazy(() => import("@/features/auth/ResetPassword")));
 
 // Client screens — lazy
 const Home = withSuspense(lazy(() => import("@/features/client/Home")));
@@ -69,6 +70,7 @@ const Conciliacion = withSuspense(lazy(() => import("@/features/admin/Conciliaci
 const AdminSolicitudes = withSuspense(lazy(() => import("@/features/admin/Solicitudes")));
 const Contratos = withSuspense(lazy(() => import("@/features/admin/Contratos")));
 const Nomina = withSuspense(lazy(() => import("@/features/admin/Nomina")));
+const Notificaciones = withSuspense(lazy(() => import("@/features/admin/Notificaciones")));
 
 // ─── Root route ───────────────────────────────────────────────────────────────
 const rootRoute = createRootRoute({
@@ -93,6 +95,12 @@ const registroRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/registro",
   component: Registro,
+});
+
+const resetPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/restablecer",
+  component: ResetPassword,
 });
 
 // ─── Client layout ───────────────────────────────────────────────────────────
@@ -278,10 +286,17 @@ const adminNominaRoute = createRoute({
   component: Nomina,
 });
 
+const adminNotificacionesRoute = createRoute({
+  getParentRoute: () => adminLayoutRoute,
+  path: "/admin/notificaciones",
+  component: Notificaciones,
+});
+
 // ─── Route tree ───────────────────────────────────────────────────────────────
 const routeTree = rootRoute.addChildren([
   loginRoute,
   registroRoute,
+  resetPasswordRoute,
   clientLayoutRoute.addChildren([
     clientHomeRoute,
     clientReservarRoute,
@@ -314,6 +329,7 @@ const routeTree = rootRoute.addChildren([
     adminSolicitudesRoute,
     adminContratosRoute,
     adminNominaRoute,
+    adminNotificacionesRoute,
   ]),
 ]);
 

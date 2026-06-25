@@ -40,13 +40,14 @@ function deps(overrides: Overrides = {}) {
       ...overrides.tokens,
     },
     auditor: { record: vi.fn(async () => ({})), ...overrides.auditor },
+    notifications: { send: vi.fn(async () => ({})), ...overrides.notifications },
     prisma: { user: { update: async () => ({}) }, ...overrides.prisma },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any;
 }
 
 function build(d: ReturnType<typeof deps>): AuthService {
-  return new AuthService(d.users, d.password, d.lockout, d.tokens, d.prisma, d.auditor);
+  return new AuthService(d.users, d.password, d.lockout, d.tokens, d.prisma, d.auditor, d.notifications);
 }
 
 const cred = { email: "a@b.co", password: "x".repeat(12) };

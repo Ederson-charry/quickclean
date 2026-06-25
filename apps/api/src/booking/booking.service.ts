@@ -2,14 +2,18 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import type { Booking } from "@prisma/client";
 import { computePrice } from "../catalog/pricing";
 import { AuditService } from "../audit/audit.service";
+import { NotificationService } from "../notifications/notification.service";
 import { PrismaService } from "../prisma/prisma.service";
 import type { CreateBookingInput } from "./booking.schemas";
+
+const copFmt = (n: number): string => `$${n.toLocaleString("es-CO")}`;
 
 @Injectable()
 export class BookingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly notifications: NotificationService,
   ) {}
 
   /**
@@ -67,6 +71,24 @@ export class BookingService {
       resourceId: booking.id,
       metadata: { serviceCategoryId: input.serviceCategoryId, tariffId: tariff.id, total: price.total },
     });
+
+    // Confirmación al cliente (best-effort: no bloquea la reserva si falla).
+    const client = await this.prisma.user.findUnique({ where: { id: clientId }, select: { email: true } });
+    if (client) {
+      const when = booking.scheduledAt.toLocaleString("es-CO", { dateStyle: "full", timeStyle: "short" });
+      await this.notifications
+        .send({
+          userId: clientId,
+          to: client.email,
+          kind: "booking_confirmed",
+          subject: `Reserva confirmada: ${category.name}`,
+          body:
+            `Tu reserva de ${category.name} quedó confirmada.\n` +
+            `Fecha: ${when}\nDirección: ${input.address}\nTotal: ${copFmt(price.total)}\n\n` +
+            "Te avisaremos cuando se asigne tu profesional.",
+        })
+        .catch(() => undefined);
+    }
 
     return booking;
   }

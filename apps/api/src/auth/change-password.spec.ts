@@ -1,6 +1,7 @@
 import { JwtService } from "@nestjs/jwt";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AuditService } from "../audit/audit.service";
+import { NotificationService } from "../notifications/notification.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { UsersService } from "../users/users.service";
 import { AuthService } from "./auth.service";
@@ -18,6 +19,7 @@ describe("AuthService.changePassword (integración) — primer ingreso forzado",
     new TokenService(new JwtService({ secret: "test-secret" }), prisma),
     prisma,
     new AuditService(prisma),
+    new NotificationService(prisma),
   );
   const ts = Date.now();
   const email = `cpw-${ts}@x.co`;

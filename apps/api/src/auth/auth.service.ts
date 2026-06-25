@@ -1,14 +1,18 @@
+import { createHash, randomBytes } from "node:crypto";
 import { BadRequestException, ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
 import type { ForcedPasswordChangeInput, LoginInput } from "@quickclean/shared";
 import { security } from "../config/security.config";
 import { AuditService } from "../audit/audit.service";
 import type { AuditOutcomeValue } from "../audit/audit.hash";
+import { NotificationService } from "../notifications/notification.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { UsersService } from "../users/users.service";
 import { LockoutService } from "./lockout.service";
 import { PasswordService } from "./password.service";
 import type { IssuedTokens } from "./token.service";
 import { TokenService } from "./token.service";
+
+const RESET_TTL_MS = 30 * 60 * 1000; // 30 minutos
 
 export type LoginResult = IssuedTokens | { mustChangePassword: true };
 
@@ -26,7 +30,53 @@ export class AuthService {
     private readonly tokens: TokenService,
     private readonly prisma: PrismaService,
     private readonly auditor: AuditService,
+    private readonly notifications: NotificationService,
   ) {}
+
+  private hashToken(raw: string): string {
+    return createHash("sha256").update(raw).digest("hex");
+  }
+
+  /**
+   * Rota la credencial: exige política, impide reutilizar el historial reciente,
+   * archiva la anterior, recorta el historial y limpia el flag de cambio forzado.
+   */
+  private async rotateCredential(userId: string, currentHash: string | null, newPlain: string): Promise<void> {
+    this.password.assertPolicy(newPlain);
+    const history = await this.prisma.passwordHistory.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: security.passwordHistory,
+    });
+    const recent = [currentHash, ...history.map((h) => h.passwordHash)].filter(Boolean) as string[];
+    if (recent.length > 0 && (await this.password.isReused(newPlain, recent))) {
+      throw new BadRequestException(`No puedes reutilizar tus últimas ${security.passwordHistory} contraseñas`);
+    }
+    const newHash = await this.password.hash(newPlain);
+    await this.prisma.$transaction(async (tx) => {
+      if (currentHash) {
+        await tx.passwordHistory.create({ data: { userId, passwordHash: currentHash } });
+      }
+      const old = await tx.passwordHistory.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        skip: security.passwordHistory,
+        select: { id: true },
+      });
+      if (old.length > 0) {
+        await tx.passwordHistory.deleteMany({ where: { id: { in: old.map((o) => o.id) } } });
+      }
+      await tx.credential.upsert({
+        where: { userId },
+        update: { passwordHash: newHash, passwordChangedAt: new Date(), mustChangePassword: false },
+        create: { userId, passwordHash: newHash, mustChangePassword: false },
+      });
+      await tx.user.update({
+        where: { id: userId },
+        data: { failedLoginCount: 0, lockedUntil: null, status: "active" },
+      });
+    });
+  }
 
   private audit(
     action: string,
@@ -137,47 +187,57 @@ export class AuthService {
       return invalid();
     }
 
-    this.password.assertPolicy(input.newPassword);
-    const history = await this.prisma.passwordHistory.findMany({
-      where: { userId: user.id },
-      orderBy: { createdAt: "desc" },
-      take: security.passwordHistory,
-    });
-    const recent = [user.credential.passwordHash, ...history.map((h) => h.passwordHash)];
-    if (await this.password.isReused(input.newPassword, recent)) {
-      await this.audit("auth.password_change", "failure", ctx, {
-        actorId: user.id,
-        metadata: { reason: "reused" },
-      });
-      throw new BadRequestException(`No puedes reutilizar tus últimas ${security.passwordHistory} contraseñas`);
-    }
-
-    const newHash = await this.password.hash(input.newPassword);
-    await this.prisma.$transaction(async (tx) => {
-      await tx.passwordHistory.create({ data: { userId: user.id, passwordHash: user.credential!.passwordHash } });
-      // conserva solo las N más recientes
-      const old = await tx.passwordHistory.findMany({
-        where: { userId: user.id },
-        orderBy: { createdAt: "desc" },
-        skip: security.passwordHistory,
-        select: { id: true },
-      });
-      if (old.length > 0) {
-        await tx.passwordHistory.deleteMany({ where: { id: { in: old.map((o) => o.id) } } });
-      }
-      await tx.credential.update({
-        where: { userId: user.id },
-        data: { passwordHash: newHash, passwordChangedAt: new Date(), mustChangePassword: false },
-      });
-      await tx.user.update({
-        where: { id: user.id },
-        data: { failedLoginCount: 0, lockedUntil: null, status: "active" },
-      });
-    });
+    await this.rotateCredential(user.id, user.credential.passwordHash, input.newPassword);
 
     await this.audit("auth.password_change", "success", ctx, { actorId: user.id });
     const permissions = await this.users.permissionsOf(user.id);
     return this.tokens.issue({ userId: user.id, permissions, ...ctx });
+  }
+
+  /**
+   * Solicita restablecer la contraseña. Respuesta uniforme (anti-enumeración): si
+   * el correo existe, genera un token de un solo uso y lo notifica; si no, no hace
+   * nada. El controlador siempre responde 200.
+   */
+  async requestPasswordReset(email: string, ctx: Ctx): Promise<void> {
+    const user = await this.users.findByEmail(email);
+    if (user) {
+      const raw = randomBytes(32).toString("base64url");
+      await this.prisma.passwordResetToken.create({
+        data: { userId: user.id, tokenHash: this.hashToken(raw), expiresAt: new Date(Date.now() + RESET_TTL_MS) },
+      });
+      const appUrl = process.env.APP_URL ?? "http://localhost:5173";
+      const link = `${appUrl}/restablecer?token=${raw}`;
+      await this.notifications.send({
+        userId: user.id,
+        to: user.email,
+        kind: "password_reset",
+        subject: "Restablece tu contraseña de QuickClean",
+        body:
+          `Solicitaste restablecer tu contraseña. Abre este enlace (vence en 30 minutos):\n${link}\n\n` +
+          "Si no fuiste tú, ignora este mensaje; tu contraseña sigue intacta.",
+      });
+    }
+    await this.audit("auth.password_reset_request", "success", ctx, {
+      actorId: user?.id ?? null,
+      metadata: { email },
+    });
+  }
+
+  /** Restablece la contraseña con un token válido (un solo uso, no expirado). */
+  async resetPassword(token: string, newPassword: string, ctx: Ctx): Promise<void> {
+    const row = await this.prisma.passwordResetToken.findUnique({ where: { tokenHash: this.hashToken(token) } });
+    if (!row || row.usedAt || row.expiresAt.getTime() < Date.now()) {
+      await this.audit("auth.password_reset", "failure", ctx, { metadata: { reason: "invalid_token" } });
+      throw new BadRequestException("El enlace de restablecimiento es inválido o expiró");
+    }
+    const cred = await this.prisma.credential.findUnique({ where: { userId: row.userId } });
+    await this.rotateCredential(row.userId, cred?.passwordHash ?? null, newPassword);
+    await this.prisma.passwordResetToken.updateMany({
+      where: { userId: row.userId, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+    await this.audit("auth.password_reset", "success", ctx, { actorId: row.userId });
   }
 
   /** Perfil del usuario autenticado (identidad + roles + permisos). */
