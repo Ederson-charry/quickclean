@@ -16,6 +16,11 @@ export class QuickerController {
     return this.bookings.listForQuicker(user.id);
   }
 
+  @Get("balance")
+  balance(@CurrentUser() user: AuthUser) {
+    return this.bookings.quickerBalance(user.id);
+  }
+
   @Post("reservas/:id/estado")
   async estado(@Param("id") id: string, @Body() body: unknown, @CurrentUser() user: AuthUser) {
     const parsed = QuickerStatusBody.safeParse(body);
