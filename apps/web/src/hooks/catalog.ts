@@ -800,3 +800,104 @@ export function useMarkPayrollPaid() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["nomina-historial"] }),
   });
 }
+
+// ─── Gestión de personas (alta/edición de quickers y clientes) ────────────────
+export interface AdminQuicker {
+  id: string;
+  name: string;
+  zone: string;
+  rating: number;
+  active: boolean;
+  user: { email: string; status: string };
+  skills: { serviceCategory: { id: string; name: string } }[];
+}
+
+export interface AdminClient {
+  id: string;
+  name: string;
+  kind: "persona" | "empresa";
+  requiresDirectHire: boolean;
+  user: { email: string; status: string; phone: string | null };
+}
+
+export interface CreateQuickerInput {
+  email: string;
+  name: string;
+  zone: string;
+  rating?: number;
+  skills: string[];
+}
+
+export interface CreateClientInput {
+  email: string;
+  name: string;
+  kind: "persona" | "empresa";
+  requiresDirectHire?: boolean;
+  phone?: string;
+}
+
+export interface CreatedAccount<T> {
+  tempPassword: string;
+  quicker?: T;
+  client?: T;
+}
+
+export function useAdminQuickers(enabled: boolean) {
+  return useQuery({
+    queryKey: ["admin-quickers"],
+    enabled,
+    queryFn: () => apiFetch<AdminQuicker[]>("/admin/quickers", { headers: authHeaders() }),
+  });
+}
+
+export function useCreateQuicker() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateQuickerInput) =>
+      apiFetch<{ tempPassword: string; quicker: AdminQuicker }>("/admin/quickers", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify(input),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-quickers"] }),
+  });
+}
+
+export function useUpdateQuicker() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...patch }: { id: string } & Partial<{ name: string; zone: string; rating: number; active: boolean; skills: string[] }>) =>
+      apiFetch(`/admin/quickers/${id}`, { method: "PATCH", headers: authHeaders(), body: JSON.stringify(patch) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-quickers"] }),
+  });
+}
+
+export function useAdminClients(enabled: boolean) {
+  return useQuery({
+    queryKey: ["admin-clients"],
+    enabled,
+    queryFn: () => apiFetch<AdminClient[]>("/admin/clientes", { headers: authHeaders() }),
+  });
+}
+
+export function useCreateClient() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateClientInput) =>
+      apiFetch<{ tempPassword: string; client: AdminClient }>("/admin/clientes", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify(input),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-clients"] }),
+  });
+}
+
+export function useUpdateClient() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...patch }: { id: string } & Partial<{ name: string; kind: "persona" | "empresa"; requiresDirectHire: boolean }>) =>
+      apiFetch(`/admin/clientes/${id}`, { method: "PATCH", headers: authHeaders(), body: JSON.stringify(patch) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-clients"] }),
+  });
+}

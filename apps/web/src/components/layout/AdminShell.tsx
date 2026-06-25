@@ -26,8 +26,8 @@ type NavItem = {
 
 const NAV: NavItem[] = [
   { to: "/admin", label: "Indicadores", icon: LayoutDashboard, exact: true },
-  { to: "/admin/quickers", label: "Quickers", icon: Users, exact: false },
-  { to: "/admin/clientes", label: "Clientes", icon: UserRound, exact: false },
+  { to: "/admin/quickers", label: "Quickers", icon: Users, exact: false, perm: "user.manage" },
+  { to: "/admin/clientes", label: "Clientes", icon: UserRound, exact: false, perm: "user.manage" },
   { to: "/admin/pagos", label: "Pagos", icon: CreditCard, exact: false },
   { to: "/admin/facturacion", label: "Facturación", icon: FileText, exact: false },
   { to: "/admin/reservas", label: "Reservas", icon: CalendarCheck, exact: false, perm: "booking.read" },

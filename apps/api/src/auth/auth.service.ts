@@ -1,5 +1,6 @@
-import { ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
-import type { LoginInput } from "@quickclean/shared";
+import { BadRequestException, ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
+import type { ForcedPasswordChangeInput, LoginInput } from "@quickclean/shared";
+import { security } from "../config/security.config";
 import { AuditService } from "../audit/audit.service";
 import type { AuditOutcomeValue } from "../audit/audit.hash";
 import { PrismaService } from "../prisma/prisma.service";
@@ -104,6 +105,79 @@ export class AuthService {
     const issued = await this.tokens.issue({ userId: user.id, permissions, ...ctx });
     await this.audit("auth.login", "success", ctx, { actorId: user.id });
     return issued;
+  }
+
+  /**
+   * Cambia la contraseña (flujo de primer ingreso forzado). Sin sesión: valida la
+   * contraseña actual, exige política e impide reutilizar el historial reciente.
+   * Respuestas uniformes (anti-enumeración). Al terminar emite tokens (auto-login).
+   */
+  async changePassword(input: ForcedPasswordChangeInput, ctx: Ctx): Promise<IssuedTokens> {
+    const invalid = (): never => {
+      throw new UnauthorizedException("Credenciales inválidas");
+    };
+    const user = await this.users.findByEmail(input.email);
+    if (!user || !user.credential) {
+      await this.password.burnTime(input.currentPassword);
+      await this.audit("auth.password_change", "failure", ctx, {
+        metadata: { email: input.email, reason: "unknown_user" },
+      });
+      return invalid();
+    }
+    if (this.lockout.isLocked(user.lockedUntil)) {
+      await this.audit("auth.password_change", "denied", ctx, { actorId: user.id, metadata: { reason: "locked" } });
+      throw new UnauthorizedException("Cuenta bloqueada hasta mañana por intentos fallidos");
+    }
+    const ok = await this.password.verify(user.credential.passwordHash, input.currentPassword);
+    if (!ok) {
+      await this.audit("auth.password_change", "failure", ctx, {
+        actorId: user.id,
+        metadata: { reason: "bad_current_password" },
+      });
+      return invalid();
+    }
+
+    this.password.assertPolicy(input.newPassword);
+    const history = await this.prisma.passwordHistory.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" },
+      take: security.passwordHistory,
+    });
+    const recent = [user.credential.passwordHash, ...history.map((h) => h.passwordHash)];
+    if (await this.password.isReused(input.newPassword, recent)) {
+      await this.audit("auth.password_change", "failure", ctx, {
+        actorId: user.id,
+        metadata: { reason: "reused" },
+      });
+      throw new BadRequestException(`No puedes reutilizar tus últimas ${security.passwordHistory} contraseñas`);
+    }
+
+    const newHash = await this.password.hash(input.newPassword);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.passwordHistory.create({ data: { userId: user.id, passwordHash: user.credential!.passwordHash } });
+      // conserva solo las N más recientes
+      const old = await tx.passwordHistory.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: "desc" },
+        skip: security.passwordHistory,
+        select: { id: true },
+      });
+      if (old.length > 0) {
+        await tx.passwordHistory.deleteMany({ where: { id: { in: old.map((o) => o.id) } } });
+      }
+      await tx.credential.update({
+        where: { userId: user.id },
+        data: { passwordHash: newHash, passwordChangedAt: new Date(), mustChangePassword: false },
+      });
+      await tx.user.update({
+        where: { id: user.id },
+        data: { failedLoginCount: 0, lockedUntil: null, status: "active" },
+      });
+    });
+
+    await this.audit("auth.password_change", "success", ctx, { actorId: user.id });
+    const permissions = await this.users.permissionsOf(user.id);
+    return this.tokens.issue({ userId: user.id, permissions, ...ctx });
   }
 
   /** Perfil del usuario autenticado (identidad + roles + permisos). */
