@@ -279,6 +279,40 @@ export function useTransitionBooking() {
   });
 }
 
+// ─── Panel del quicker ────────────────────────────────────────────────────────
+export interface QuickerBooking {
+  id: string;
+  scheduledAt: string;
+  status: "agendado" | "en_curso" | "completado" | "cancelado";
+  address: string;
+  duration: number;
+  priceTotal: number;
+  payout: number;
+  category?: { name: string };
+  client?: { email: string };
+}
+
+export function useQuickerBookings(enabled: boolean) {
+  return useQuery({
+    queryKey: ["quicker-reservas"],
+    enabled,
+    queryFn: () => apiFetch<QuickerBooking[]>("/quicker/reservas", { headers: authHeaders() }),
+  });
+}
+
+export function useQuickerTransition() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      apiFetch(`/quicker/reservas/${id}/estado`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ status }),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["quicker-reservas"] }),
+  });
+}
+
 // ─── Torre de Control / asignación ────────────────────────────────────────────
 export interface AssignmentCandidate {
   quickerId: string;

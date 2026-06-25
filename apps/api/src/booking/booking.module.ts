@@ -4,10 +4,11 @@ import { PrismaService } from "../prisma/prisma.service";
 import { AdminBookingController } from "./admin-booking.controller";
 import { BookingController } from "./booking.controller";
 import { BookingService } from "./booking.service";
+import { QuickerController } from "./quicker.controller";
 
 @Module({
   imports: [AuditModule],
-  controllers: [BookingController, AdminBookingController],
+  controllers: [BookingController, AdminBookingController, QuickerController],
   providers: [BookingService, PrismaService],
   exports: [BookingService],
 })
