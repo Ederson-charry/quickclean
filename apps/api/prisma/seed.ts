@@ -15,6 +15,7 @@ const PERMS = [
   "booking.manage",
   "compensation.manage",
   "erp.read",
+  "leave.manage",
 ];
 
 async function main(): Promise<void> {
@@ -214,6 +215,20 @@ async function main(): Promise<void> {
           position: "Operaria de aseo",
           contractKind: "indefinido",
           status: "activo",
+        },
+      });
+    }
+
+    // Solicitud de ausencia de ejemplo (en revisión) para la Torre de Control
+    const hasLeave = await prisma.leaveRequest.findFirst({ where: { quickerId: carolinaQuicker.id } });
+    if (!hasLeave) {
+      await prisma.leaveRequest.create({
+        data: {
+          quickerId: carolinaQuicker.id,
+          kind: "incapacidad",
+          startDate: new Date("2026-07-01"),
+          endDate: new Date("2026-07-03"),
+          reason: "Incapacidad médica por EPS (3 días)",
         },
       });
     }

@@ -462,6 +462,79 @@ export function useQuickerTransition() {
   });
 }
 
+// ─── Solicitudes de ausencia (incapacidad / licencia / vacaciones) ────────────
+export type LeaveKind = "incapacidad" | "licencia" | "vacaciones";
+export type LeaveStatus = "en_revision" | "aprobada" | "rechazada";
+
+export interface LeaveRequestDTO {
+  id: string;
+  quickerId: string;
+  kind: LeaveKind;
+  startDate: string;
+  endDate: string;
+  reason: string | null;
+  status: LeaveStatus;
+  createdAt: string;
+  reviewedById: string | null;
+  reviewedAt: string | null;
+}
+
+export interface AdminLeaveDTO extends LeaveRequestDTO {
+  quicker: { name: string; zone: string };
+}
+
+export interface SubmitLeaveInput {
+  kind: LeaveKind;
+  startDate: string;
+  endDate: string;
+  reason?: string;
+}
+
+export function useMyLeaves(enabled: boolean) {
+  return useQuery({
+    queryKey: ["quicker-solicitudes"],
+    enabled,
+    queryFn: () => apiFetch<LeaveRequestDTO[]>("/quicker/solicitudes", { headers: authHeaders() }),
+  });
+}
+
+export function useSubmitLeaveReal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: SubmitLeaveInput) =>
+      apiFetch<LeaveRequestDTO>("/quicker/solicitudes", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify(input),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["quicker-solicitudes"] }),
+  });
+}
+
+export function useAdminLeaves(status: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["admin-solicitudes", status],
+    enabled,
+    queryFn: () =>
+      apiFetch<AdminLeaveDTO[]>(`/admin/solicitudes${status ? `?status=${status}` : ""}`, {
+        headers: authHeaders(),
+      }),
+  });
+}
+
+export function useDecideLeave() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: "aprobada" | "rechazada" }) =>
+      apiFetch(`/admin/solicitudes/${id}/decidir`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ status }),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-solicitudes"] }),
+  });
+}
+
 // ─── Torre de Control / asignación ────────────────────────────────────────────
 export interface AssignmentCandidate {
   quickerId: string;

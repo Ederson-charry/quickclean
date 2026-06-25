@@ -32,6 +32,31 @@ enum EngagementType {
   employee // contrato laboral directo
 }
 
+enum LeaveStatus {
+  en_revision
+  aprobada
+  rechazada
+}
+
+/// Solicitud de ausencia del quicker (incapacidad/licencia/vacaciones). Insumo de
+/// disponibilidad para el ranking de asignación.
+model LeaveRequest {
+  id           String      @id @default(uuid())
+  quickerId    String
+  quicker      Quicker     @relation(fields: [quickerId], references: [id], onDelete: Cascade)
+  kind         String // incapacidad | licencia | vacaciones
+  startDate    DateTime
+  endDate      DateTime
+  reason       String?
+  status       LeaveStatus @default(en_revision)
+  createdAt    DateTime    @default(now())
+  reviewedById String?
+  reviewedAt   DateTime?
+
+  @@index([quickerId])
+  @@index([status])
+}
+
 /// Perfil del cliente. `empresa` exige contratación directa (solidaridad laboral, §6).
 model Client {
   id                 String         @id @default(uuid())
@@ -74,10 +99,11 @@ model Quicker {
   rating      Float               @default(5)
   active      Boolean             @default(true)
   createdAt   DateTime            @default(now())
-  skills      QuickerSkill[]
-  assignments ServiceAssignment[]
-  payouts     Payout[]
-  contracts   WorkContract[]
+  skills        QuickerSkill[]
+  assignments   ServiceAssignment[]
+  payouts       Payout[]
+  contracts     WorkContract[]
+  leaveRequests LeaveRequest[]
 
   @@index([active])
 }
