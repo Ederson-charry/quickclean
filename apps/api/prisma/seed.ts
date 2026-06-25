@@ -115,7 +115,57 @@ async function main(): Promise<void> {
     }
   }
 
-  console.log("Seed listo. admin@quickclean.co / CambiaEsto-2026! · catálogo + tarifa base sembrados");
+  // ── Quickers + skills (Torre de Control) ────────────────────────────────────
+  const quickerRole = await prisma.role.upsert({
+    where: { key: "quicker" },
+    update: {},
+    create: { key: "quicker", name: "Quicker" },
+  });
+  const cats = await prisma.serviceCategory.findMany();
+  const bySlug = (s: string) => cats.find((c) => c.slug === s)?.id;
+  const QUICKERS = [
+    { email: "carolina@quickclean.co", name: "Carolina Méndez", zone: "Chapinero", rating: 4.9, skills: ["limpieza-general", "limpieza-profunda"] },
+    { email: "jorge@quickclean.co", name: "Jorge Patiño", zone: "Suba", rating: 4.7, skills: ["limpieza-general", "post-obra"] },
+    { email: "diana@quickclean.co", name: "Diana Rojas", zone: "Engativá", rating: 5.0, skills: ["limpieza-general"] },
+  ];
+  for (const q of QUICKERS) {
+    const u = await prisma.user.upsert({
+      where: { email: q.email },
+      update: {},
+      create: { email: q.email, status: "active", emailVerifiedAt: new Date() },
+    });
+    await prisma.credential.upsert({
+      where: { userId: u.id },
+      update: {},
+      create: {
+        userId: u.id,
+        passwordHash: await argon2.hash("Quicker-2026!", { type: argon2.argon2id }),
+        mustChangePassword: false,
+      },
+    });
+    await prisma.userRole.upsert({
+      where: { userId_roleId: { userId: u.id, roleId: quickerRole.id } },
+      update: {},
+      create: { userId: u.id, roleId: quickerRole.id },
+    });
+    const quicker = await prisma.quicker.upsert({
+      where: { userId: u.id },
+      update: { name: q.name, zone: q.zone, rating: q.rating },
+      create: { userId: u.id, name: q.name, zone: q.zone, rating: q.rating },
+    });
+    for (const slug of q.skills) {
+      const catId = bySlug(slug);
+      if (catId) {
+        await prisma.quickerSkill.upsert({
+          where: { quickerId_serviceCategoryId: { quickerId: quicker.id, serviceCategoryId: catId } },
+          update: {},
+          create: { quickerId: quicker.id, serviceCategoryId: catId },
+        });
+      }
+    }
+  }
+
+  console.log("Seed listo. admin@quickclean.co · catálogo + tarifa + 3 quickers con skills sembrados");
 }
 
 main()

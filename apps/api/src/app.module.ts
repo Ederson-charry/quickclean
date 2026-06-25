@@ -5,6 +5,7 @@ import { ScheduleModule } from "@nestjs/schedule";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { AuditModule } from "./audit/audit.module";
 import { UsersModule } from "./users/users.module";
+import { AssignmentModule } from "./assignment/assignment.module";
 import { AuthModule } from "./auth/auth.module";
 import { BookingModule } from "./booking/booking.module";
 import { CatalogModule } from "./catalog/catalog.module";
@@ -22,6 +23,7 @@ import { PrismaService } from "./prisma/prisma.service";
     AuditModule,
     CatalogModule,
     BookingModule,
+    AssignmentModule,
     UsersModule,
   ],
   controllers: [HealthController],

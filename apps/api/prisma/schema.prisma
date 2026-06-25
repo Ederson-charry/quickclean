@@ -27,6 +27,49 @@ enum BookingStatus {
   cancelado
 }
 
+/// Perfil operativo del quicker (vinculado a un User con rol quicker).
+model Quicker {
+  id          String              @id @default(uuid())
+  userId      String              @unique
+  user        User                @relation("UserQuicker", fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  zone        String
+  rating      Float               @default(5)
+  active      Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  skills      QuickerSkill[]
+  assignments ServiceAssignment[]
+
+  @@index([active])
+}
+
+/// Capacidad del quicker por categoría de servicio (gap del modelo, spec §8.1).
+model QuickerSkill {
+  id                String          @id @default(uuid())
+  quickerId         String
+  quicker           Quicker         @relation(fields: [quickerId], references: [id], onDelete: Cascade)
+  serviceCategoryId String
+  serviceCategory   ServiceCategory @relation(fields: [serviceCategoryId], references: [id])
+  level             Int?
+
+  @@unique([quickerId, serviceCategoryId])
+  @@index([serviceCategoryId])
+}
+
+/// Asignación de un quicker a una reserva (salida de la Torre de Control).
+model ServiceAssignment {
+  id           String   @id @default(uuid())
+  bookingId    String   @unique
+  booking      Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  quickerId    String
+  quicker      Quicker  @relation(fields: [quickerId], references: [id])
+  assignedById String
+  assignedAt   DateTime @default(now())
+  reason       String?
+
+  @@index([quickerId])
+}
+
 /// Reserva de servicio. Guarda snapshot de tariffId y del precio calculado:
 /// aunque la tarifa cambie/expire después, la reserva conserva su precio.
 model Booking {
@@ -55,6 +98,7 @@ model Booking {
   rating            Int?
   ratingComment     String?
   createdAt         DateTime        @default(now())
+  assignment        ServiceAssignment?
 
   @@index([clientId])
   @@index([status])
@@ -72,9 +116,10 @@ model ServiceCategory {
   active      Boolean   @default(true)
   sortOrder   Int       @default(0)
   createdAt   DateTime  @default(now())
-  archivedAt  DateTime?
-  tariffs     Tariff[]
-  bookings    Booking[]
+  archivedAt    DateTime?
+  tariffs       Tariff[]
+  bookings      Booking[]
+  quickerSkills QuickerSkill[]
 
   @@index([active])
 }
@@ -167,6 +212,7 @@ model User {
   roles           UserRole[]
   bookingsAsClient  Booking[] @relation("BookingClient")
   bookingsAsQuicker Booking[] @relation("BookingQuicker")
+  quickerProfile    Quicker?  @relation("UserQuicker")
 }
 
 model Credential {
