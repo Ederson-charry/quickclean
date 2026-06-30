@@ -10,10 +10,7 @@ import loginBg from "@/assets/login-bg.jpg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { useSession } from "@/stores/session";
 import { useAuth } from "@/hooks/useAuth";
-import type { Role } from "@/mocks/types";
 
 const loginSchema = z.object({
   email: z.string().email("Correo inválido"),
@@ -21,20 +18,7 @@ const loginSchema = z.object({
 });
 type LoginForm = z.infer<typeof loginSchema>;
 
-const DEMO_ROLES: { role: Role; label: string; color: string }[] = [
-  { role: "client",  label: "Entrar como Cliente",  color: "bg-brand-600 hover:bg-brand-700 text-white" },
-  { role: "quicker", label: "Entrar como Quicker",  color: "bg-success hover:bg-success/90 text-white" },
-  { role: "admin",   label: "Entrar como Admin",    color: "bg-navy hover:bg-navy/90 text-white" },
-];
-
-const ROLE_HOME: Record<Role, string> = {
-  client:  "/app",
-  quicker: "/pro",
-  admin:   "/admin",
-};
-
 export default function Login() {
-  const { login } = useSession();
   const { login: apiLogin, changePassword, recover } = useAuth();
   const navigate = useNavigate();
   const [forceChange, setForceChange] = useState<{ email: string; current: string } | null>(null);
@@ -60,14 +44,6 @@ export default function Login() {
     } catch {
       toast.error("Credenciales inválidas");
     }
-  };
-
-  const handleDemo = (role: Role) => {
-    login(role);
-    toast.success(
-      `Sesión iniciada como ${role === "client" ? "Cliente" : role === "quicker" ? "Quicker" : "Admin"}`
-    );
-    navigate({ to: ROLE_HOME[role] });
   };
 
   return (
@@ -222,27 +198,6 @@ export default function Login() {
               >
                 Regístrate
               </Link>
-            </div>
-          </div>
-
-          {/* Demo buttons — stagger delay 4 */}
-          <div className="animate-rise" style={{ animationDelay: "0.48s" }}>
-            <Separator className="my-5 bg-white/20" />
-            <p className="text-xs text-center text-white/55 font-medium uppercase tracking-widest mb-3">
-              Acceso de demostración
-            </p>
-            <div className="space-y-2">
-              {DEMO_ROLES.map(({ role, label, color }) => (
-                <button
-                  key={role}
-                  type="button"
-                  onClick={() => handleDemo(role)}
-                  aria-label={label}
-                  className={`w-full rounded-xl min-h-[44px] py-2.5 px-4 text-sm font-semibold transition-all duration-150 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-white/60 ${color}`}
-                >
-                  {label}
-                </button>
-              ))}
             </div>
           </div>
           </>

@@ -1,4 +1,4 @@
-import { Outlet, Link, useNavigate } from "@tanstack/react-router";
+import { Outlet, Link, Navigate, useNavigate } from "@tanstack/react-router";
 import { LayoutDashboard, Users, UserRound, CreditCard, FileText, ShieldCheck, Tag, Sparkles, CalendarCheck, ClipboardList, Banknote, FileSpreadsheet, CalendarClock, FileSignature, Receipt, Bell, Menu, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
@@ -10,7 +10,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { RoleSwitcher } from "@/components/shared/RoleSwitcher";
 import { Brand } from "./Brand";
 import { useSession } from "@/stores/session";
 import { cn } from "@/lib/utils";
@@ -68,9 +67,15 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 
 export function AdminShell() {
   const { user, logout } = useSession();
+  const accessToken = useSession((s) => s.accessToken);
   const navigate = useNavigate();
   const initials = user?.name?.split(" ").map((n) => n[0]).join("").slice(0, 2) ?? "AD";
   const [open, setOpen] = useState(false);
+
+  // Solo con sesión real: sin token, no hay datos que mostrar → al login.
+  if (!accessToken) {
+    return <Navigate to="/login" replace />;
+  }
 
   const handleLogout = () => {
     logout();
@@ -116,7 +121,6 @@ export function AdminShell() {
               </div>
 
               <div className="flex items-center gap-3 ml-auto">
-                <RoleSwitcher />
                 <DropdownMenu>
                   <DropdownMenuTrigger className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2">
                     <Avatar className="h-8 w-8 cursor-pointer">

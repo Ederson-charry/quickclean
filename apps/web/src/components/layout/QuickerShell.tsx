@@ -1,4 +1,4 @@
-import { Outlet, Link, useNavigate } from "@tanstack/react-router";
+import { Outlet, Link, Navigate, useNavigate } from "@tanstack/react-router";
 import { Briefcase, Wallet, FileText, User, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -9,7 +9,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { RoleSwitcher } from "@/components/shared/RoleSwitcher";
 import { Brand } from "./Brand";
 import { useSession } from "@/stores/session";
 import { cn } from "@/lib/utils";
@@ -23,8 +22,13 @@ const NAV = [
 
 export function QuickerShell() {
   const { user, logout } = useSession();
+  const accessToken = useSession((s) => s.accessToken);
   const navigate = useNavigate();
   const initials = user?.name?.split(" ").map((n) => n[0]).join("").slice(0, 2) ?? "QK";
+
+  if (!accessToken) {
+    return <Navigate to="/login" replace />;
+  }
 
   const handleLogout = () => {
     logout();
@@ -52,7 +56,6 @@ export function QuickerShell() {
             ))}
           </nav>
           <div className="flex items-center gap-3">
-            <RoleSwitcher />
             <DropdownMenu>
               <DropdownMenuTrigger className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2">
                 <Avatar className="h-8 w-8 cursor-pointer">
