@@ -5,6 +5,7 @@ import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuItem,
@@ -64,12 +65,14 @@ export function ClientShell() {
                 </Avatar>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" side="bottom" sideOffset={8}>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-semibold text-sm text-ink">{user?.name ?? "Cliente"}</span>
-                    <span className="text-xs text-faint">Cliente</span>
-                  </div>
-                </DropdownMenuLabel>
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-semibold text-sm text-ink">{user?.name ?? "Cliente"}</span>
+                      <span className="text-xs text-faint">Cliente</span>
+                    </div>
+                  </DropdownMenuLabel>
+                </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={handleLogout}
