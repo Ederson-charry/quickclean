@@ -10,6 +10,17 @@ export const CreateCategoryInput = z.object({
 });
 export type CreateCategoryInput = z.infer<typeof CreateCategoryInput>;
 
+/** Edición de una categoría (no cambia el slug: lo referencian tarifas/históricos). */
+export const UpdateCategoryInput = z.object({
+  name: z.string().min(2).optional(),
+  description: z.string().optional(),
+  iconName: z.string().min(1).optional(),
+  colorToken: z.string().min(1).optional(),
+  sortOrder: z.number().int().min(0).optional(),
+  active: z.boolean().optional(),
+});
+export type UpdateCategoryInput = z.infer<typeof UpdateCategoryInput>;
+
 export const TariffRuleInput = z.object({
   dimension: z.enum(["duration", "frequency", "size", "supplies", "platform_fee", "payout_pct"]),
   key: z.string(),

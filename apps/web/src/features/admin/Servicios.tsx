@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Archive,
   Bath,
@@ -6,7 +6,9 @@ import {
   Building2,
   HardHat,
   type LucideIcon,
+  Pencil,
   Plus,
+  RotateCcw,
   Sofa,
   Sparkles,
   Tag,
@@ -31,6 +33,7 @@ import {
   useAllCategories,
   useArchiveCategory,
   useCreateCategory,
+  useUpdateCategory,
 } from "@/hooks/catalog";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/stores/session";
@@ -60,8 +63,10 @@ const createSchema = z.object({
   sortOrder: z.coerce.number().int().min(0),
 });
 
-function CreateDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+function CategoryDialog({ open, cat, onClose }: { open: boolean; cat: ServiceCategory | null; onClose: () => void }) {
   const create = useCreateCategory();
+  const update = useUpdateCategory();
+  const editing = cat != null;
   const [form, setForm] = useState({
     slug: "",
     name: "",
@@ -72,18 +77,50 @@ function CreateDialog({ open, onClose }: { open: boolean; onClose: () => void })
   });
   const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
 
+  // Carga los valores al abrir en modo edición (o limpia al crear).
+  useEffect(() => {
+    if (!open) return;
+    setForm(
+      cat
+        ? {
+            slug: cat.slug,
+            name: cat.name,
+            description: cat.description ?? "",
+            iconName: cat.iconName,
+            colorToken: cat.colorToken,
+            sortOrder: String(cat.sortOrder),
+          }
+        : { slug: "", name: "", description: "", iconName: "Sparkles", colorToken: "brand-600", sortOrder: "0" },
+    );
+  }, [open, cat]);
+
+  const pending = create.isPending || update.isPending;
+
   const submit = () => {
+    if (editing) {
+      update.mutate(
+        {
+          id: cat.id,
+          name: form.name,
+          description: form.description || undefined,
+          iconName: form.iconName,
+          colorToken: form.colorToken,
+          sortOrder: Number(form.sortOrder) || 0,
+        },
+        {
+          onSuccess: () => { toast.success("Categoría actualizada"); onClose(); },
+          onError: () => toast.error("No se pudo actualizar"),
+        },
+      );
+      return;
+    }
     const parsed = createSchema.safeParse(form);
     if (!parsed.success) {
       toast.error("Revisa el slug, nombre, icono y color.");
       return;
     }
     create.mutate(parsed.data, {
-      onSuccess: () => {
-        toast.success("Categoría creada");
-        setForm({ slug: "", name: "", description: "", iconName: "Sparkles", colorToken: "brand-600", sortOrder: "0" });
-        onClose();
-      },
+      onSuccess: () => { toast.success("Categoría creada"); onClose(); },
       onError: () => toast.error("No se pudo crear (¿slug repetido o permiso?)"),
     });
   };
@@ -92,7 +129,7 @@ function CreateDialog({ open, onClose }: { open: boolean; onClose: () => void })
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="font-display">Nueva categoría de servicio</DialogTitle>
+          <DialogTitle className="font-display">{editing ? "Editar categoría" : "Nueva categoría de servicio"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -101,8 +138,8 @@ function CreateDialog({ open, onClose }: { open: boolean; onClose: () => void })
               <Input id="s-name" placeholder="Limpieza de oficinas" value={form.name} onChange={(e) => set("name")(e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="s-slug" className="text-xs text-ink-2">Slug</Label>
-              <Input id="s-slug" placeholder="limpieza-oficinas" value={form.slug} onChange={(e) => set("slug")(e.target.value)} />
+              <Label htmlFor="s-slug" className="text-xs text-ink-2">Slug {editing && <span className="text-faint">(no editable)</span>}</Label>
+              <Input id="s-slug" placeholder="limpieza-oficinas" value={form.slug} onChange={(e) => set("slug")(e.target.value)} disabled={editing} />
             </div>
           </div>
           <div className="space-y-1.5">
@@ -125,13 +162,8 @@ function CreateDialog({ open, onClose }: { open: boolean; onClose: () => void })
           </div>
           <div className="flex justify-end gap-2 border-t border-line pt-3">
             <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
-            <Button
-              type="button"
-              className="bg-brand-600 text-white hover:bg-brand-700"
-              onClick={submit}
-              disabled={create.isPending}
-            >
-              {create.isPending ? "Creando…" : "Crear categoría"}
+            <Button type="button" className="bg-brand-600 text-white hover:bg-brand-700" onClick={submit} disabled={pending}>
+              {pending ? "Guardando…" : editing ? "Guardar cambios" : "Crear categoría"}
             </Button>
           </div>
         </div>
@@ -140,9 +172,16 @@ function CreateDialog({ open, onClose }: { open: boolean; onClose: () => void })
   );
 }
 
-function CategoryCard({ cat }: { cat: ServiceCategory }) {
+function CategoryCard({ cat, onEdit }: { cat: ServiceCategory; onEdit: () => void }) {
   const archive = useArchiveCategory();
+  const update = useUpdateCategory();
   const archived = cat.archivedAt != null || !cat.active;
+
+  const reactivate = () =>
+    update.mutate(
+      { id: cat.id, active: true },
+      { onSuccess: () => toast.success(`"${cat.name}" reactivada`), onError: () => toast.error("No se pudo reactivar") },
+    );
 
   return (
     <li
@@ -163,23 +202,39 @@ function CategoryCard({ cat }: { cat: ServiceCategory }) {
         </div>
         <p className="font-mono text-xs text-faint">{cat.slug}</p>
         {cat.description && <p className="mt-1 line-clamp-2 text-sm text-ink-2">{cat.description}</p>}
-        {!archived && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="mt-2 text-ink-2 hover:text-danger"
-            onClick={() =>
-              archive.mutate(cat.id, {
-                onSuccess: () => toast.success(`"${cat.name}" archivada`),
-                onError: () => toast.error("No se pudo archivar"),
-              })
-            }
-            disabled={archive.isPending}
-          >
-            <Archive className="size-4" /> Archivar
+        <div className="mt-2 flex flex-wrap gap-1">
+          <Button type="button" variant="ghost" size="sm" className="text-ink-2 hover:text-brand-600" onClick={onEdit}>
+            <Pencil className="size-4" /> Editar
           </Button>
-        )}
+          {archived ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-ink-2 hover:text-success"
+              onClick={reactivate}
+              disabled={update.isPending}
+            >
+              <RotateCcw className="size-4" /> Reactivar
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-ink-2 hover:text-danger"
+              onClick={() =>
+                archive.mutate(cat.id, {
+                  onSuccess: () => toast.success(`"${cat.name}" archivada`),
+                  onError: () => toast.error("No se pudo archivar"),
+                })
+              }
+              disabled={archive.isPending}
+            >
+              <Archive className="size-4" /> Archivar
+            </Button>
+          )}
+        </div>
       </div>
     </li>
   );
@@ -188,7 +243,11 @@ function CategoryCard({ cat }: { cat: ServiceCategory }) {
 export default function Servicios() {
   const enabled = !!useSession((s) => s.accessToken);
   const { data, isLoading, isError, refetch } = useAllCategories(enabled);
-  const [showCreate, setShowCreate] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editCat, setEditCat] = useState<ServiceCategory | null>(null);
+
+  const openCreate = () => { setEditCat(null); setDialogOpen(true); };
+  const openEdit = (cat: ServiceCategory) => { setEditCat(cat); setDialogOpen(true); };
 
   return (
     <div className="space-y-5 sm:space-y-6">
@@ -201,7 +260,7 @@ export default function Servicios() {
           <Button
             type="button"
             className="shrink-0 bg-brand-600 text-white hover:bg-brand-700"
-            onClick={() => setShowCreate(true)}
+            onClick={openCreate}
           >
             <Plus className="size-4" /> <span className="hidden sm:inline">Nueva categoría</span>
           </Button>
@@ -223,12 +282,12 @@ export default function Servicios() {
       ) : (
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {data.map((cat) => (
-            <CategoryCard key={cat.id} cat={cat} />
+            <CategoryCard key={cat.id} cat={cat} onEdit={() => openEdit(cat)} />
           ))}
         </ul>
       )}
 
-      <CreateDialog open={showCreate} onClose={() => setShowCreate(false)} />
+      <CategoryDialog open={dialogOpen} cat={editCat} onClose={() => setDialogOpen(false)} />
     </div>
   );
 }

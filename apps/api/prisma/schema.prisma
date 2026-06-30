@@ -64,6 +64,8 @@ model Client {
   user               User           @relation("UserClient", fields: [userId], references: [id], onDelete: Cascade)
   name               String
   kind               String         @default("persona") // persona | empresa
+  docType            String? // cc | nit | ce | pasaporte
+  docNumber          String?
   requiresDirectHire Boolean        @default(false)
   createdAt          DateTime       @default(now())
   contracts          WorkContract[]
