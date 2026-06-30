@@ -39,6 +39,11 @@ export class QuickersAdminController {
     }
     return this.staff.updateQuicker(id, p.data, user.id);
   }
+
+  @Post(":id/reset-password")
+  resetPassword(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.staff.resetQuickerPassword(id, user.id);
+  }
 }
 
 @Controller("admin/clientes")
@@ -68,5 +73,10 @@ export class ClientsAdminController {
       throw new BadRequestException(p.error.issues[0]?.message ?? "Datos inválidos");
     }
     return this.staff.updateClient(id, p.data, user.id);
+  }
+
+  @Post(":id/reset-password")
+  resetPassword(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.staff.resetClientPassword(id, user.id);
   }
 }

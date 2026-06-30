@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import type { ServiceCategory } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
-import type { CreateCategoryInput } from "./catalog.schemas";
+import type { CreateCategoryInput, UpdateCategoryInput } from "./catalog.schemas";
 
 @Injectable()
 export class CatalogService {
@@ -29,6 +29,27 @@ export class CatalogService {
         iconName: input.iconName,
         colorToken: input.colorToken,
         sortOrder: input.sortOrder ?? 0,
+      },
+    });
+  }
+
+  /** Edita una categoría existente (sin tocar el slug). `active:true` la reactiva. */
+  async update(id: string, input: UpdateCategoryInput): Promise<ServiceCategory> {
+    const existing = await this.prisma.serviceCategory.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException("Categoría no encontrada");
+    }
+    return this.prisma.serviceCategory.update({
+      where: { id },
+      data: {
+        name: input.name ?? undefined,
+        description: input.description ?? undefined,
+        iconName: input.iconName ?? undefined,
+        colorToken: input.colorToken ?? undefined,
+        sortOrder: input.sortOrder ?? undefined,
+        active: input.active ?? undefined,
+        // Reactivar limpia la marca de archivado.
+        archivedAt: input.active === true ? null : undefined,
       },
     });
   }

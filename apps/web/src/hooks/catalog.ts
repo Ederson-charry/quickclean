@@ -164,6 +164,31 @@ export function useCreateCategory() {
   });
 }
 
+export interface UpdateCategoryInput {
+  name?: string;
+  description?: string;
+  iconName?: string;
+  colorToken?: string;
+  sortOrder?: number;
+  active?: boolean;
+}
+
+export function useUpdateCategory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...patch }: { id: string } & UpdateCategoryInput) =>
+      apiFetch<ServiceCategory>(`/admin/servicios/${id}`, {
+        method: "PATCH",
+        headers: authHeaders(),
+        body: JSON.stringify(patch),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["servicios"] });
+      qc.invalidateQueries({ queryKey: ["catalogo"] });
+    },
+  });
+}
+
 export function useArchiveCategory() {
   const qc = useQueryClient();
   return useMutation({
@@ -808,14 +833,18 @@ export interface AdminQuicker {
   zone: string;
   rating: number;
   active: boolean;
-  user: { email: string; status: string };
+  user: { email: string; status: string; phone: string | null };
   skills: { serviceCategory: { id: string; name: string } }[];
 }
+
+export type DocType = "cc" | "nit" | "ce" | "pasaporte";
 
 export interface AdminClient {
   id: string;
   name: string;
   kind: "persona" | "empresa";
+  docType: DocType | null;
+  docNumber: string | null;
   requiresDirectHire: boolean;
   user: { email: string; status: string; phone: string | null };
 }
@@ -824,6 +853,7 @@ export interface CreateQuickerInput {
   email: string;
   name: string;
   zone: string;
+  phone?: string;
   rating?: number;
   skills: string[];
 }
@@ -832,6 +862,8 @@ export interface CreateClientInput {
   email: string;
   name: string;
   kind: "persona" | "empresa";
+  docType?: DocType;
+  docNumber?: string;
   requiresDirectHire?: boolean;
   phone?: string;
 }
@@ -866,9 +898,16 @@ export function useCreateQuicker() {
 export function useUpdateQuicker() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...patch }: { id: string } & Partial<{ name: string; zone: string; rating: number; active: boolean; skills: string[] }>) =>
+    mutationFn: ({ id, ...patch }: { id: string } & Partial<{ name: string; zone: string; phone: string; rating: number; active: boolean; skills: string[] }>) =>
       apiFetch(`/admin/quickers/${id}`, { method: "PATCH", headers: authHeaders(), body: JSON.stringify(patch) }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-quickers"] }),
+  });
+}
+
+export function useResetQuickerPassword() {
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<{ tempPassword: string }>(`/admin/quickers/${id}/reset-password`, { method: "POST", headers: authHeaders() }),
   });
 }
 
@@ -896,9 +935,16 @@ export function useCreateClient() {
 export function useUpdateClient() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...patch }: { id: string } & Partial<{ name: string; kind: "persona" | "empresa"; requiresDirectHire: boolean }>) =>
+    mutationFn: ({ id, ...patch }: { id: string } & Partial<{ name: string; kind: "persona" | "empresa"; docType: DocType; docNumber: string; phone: string; requiresDirectHire: boolean; active: boolean }>) =>
       apiFetch(`/admin/clientes/${id}`, { method: "PATCH", headers: authHeaders(), body: JSON.stringify(patch) }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-clients"] }),
+  });
+}
+
+export function useResetClientPassword() {
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<{ tempPassword: string }>(`/admin/clientes/${id}/reset-password`, { method: "POST", headers: authHeaders() }),
   });
 }
 

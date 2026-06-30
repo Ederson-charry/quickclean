@@ -2,13 +2,14 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Check, KeyRound, MapPin, Star, UserPlus } from "lucide-react";
+import { Check, KeyRound, MapPin, Phone, Star, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import {
   type AdminQuicker,
   useAdminQuickers,
   useAllCategories,
   useCreateQuicker,
+  useResetQuickerPassword,
   useUpdateQuicker,
 } from "@/hooks/catalog";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +25,7 @@ const schema = z.object({
   email: z.string().email("Correo inválido"),
   name: z.string().min(2, "Nombre requerido"),
   zone: z.string().min(2, "Zona requerida"),
+  phone: z.string().optional(),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -73,7 +75,7 @@ function NewQuickerForm({ onCreated }: { onCreated: (email: string, pw: string) 
 
   const onSubmit = async (data: FormValues) => {
     try {
-      const res = await create.mutateAsync({ ...data, skills });
+      const res = await create.mutateAsync({ ...data, phone: data.phone || undefined, skills });
       onCreated(data.email, res.tempPassword);
       reset();
       setSkills([]);
@@ -98,10 +100,14 @@ function NewQuickerForm({ onCreated }: { onCreated: (email: string, pw: string) 
           <Input id="q-email" type="email" {...register("email")} className={cn("border-line", errors.email && "border-danger")} placeholder="quicker@correo.com" />
           {errors.email && <p className="text-xs text-danger">{errors.email.message}</p>}
         </div>
-        <div className="space-y-1.5 sm:col-span-2">
+        <div className="space-y-1.5">
           <Label htmlFor="q-zone">Zona</Label>
           <Input id="q-zone" {...register("zone")} className={cn("border-line", errors.zone && "border-danger")} placeholder="Chapinero" />
           {errors.zone && <p className="text-xs text-danger">{errors.zone.message}</p>}
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="q-phone">Celular</Label>
+          <Input id="q-phone" {...register("phone")} className="border-line" placeholder="300 123 4567" />
         </div>
       </div>
 
@@ -134,10 +140,12 @@ function NewQuickerForm({ onCreated }: { onCreated: (email: string, pw: string) 
   );
 }
 
-function QuickerRow({ q }: { q: AdminQuicker }) {
+function QuickerRow({ q, onTempPassword }: { q: AdminQuicker; onTempPassword: (email: string, pw: string) => void }) {
   const update = useUpdateQuicker();
+  const resetPw = useResetQuickerPassword();
   const [editing, setEditing] = useState(false);
   const [zone, setZone] = useState(q.zone);
+  const [phone, setPhone] = useState(q.user.phone ?? "");
   const cats = useAllCategories(editing);
   const [skills, setSkills] = useState<string[]>(q.skills.map((s) => s.serviceCategory.id));
 
@@ -146,9 +154,15 @@ function QuickerRow({ q }: { q: AdminQuicker }) {
 
   const save = () =>
     update.mutate(
-      { id: q.id, zone, skills },
+      { id: q.id, zone, phone, skills },
       { onSuccess: () => { toast.success("Quicker actualizado"); setEditing(false); }, onError: () => toast.error("No se pudo actualizar") },
     );
+
+  const resetPassword = () =>
+    resetPw.mutate(q.id, {
+      onSuccess: (res) => onTempPassword(q.user.email, res.tempPassword),
+      onError: () => toast.error("No se pudo restablecer"),
+    });
 
   const toggleActive = () =>
     update.mutate(
@@ -170,6 +184,7 @@ function QuickerRow({ q }: { q: AdminQuicker }) {
             <span className="inline-flex items-center gap-1"><MapPin className="size-3" /> {q.zone}</span>
             <span className="inline-flex items-center gap-1"><Star className="size-3 text-amber-500" /> {q.rating}</span>
             <span className="truncate text-faint">{q.user.email}</span>
+            {q.user.phone && <span className="inline-flex items-center gap-1"><Phone className="size-3" /> {q.user.phone}</span>}
           </div>
           <div className="mt-1.5 flex flex-wrap gap-1">
             {q.skills.map((s) => (
@@ -187,9 +202,15 @@ function QuickerRow({ q }: { q: AdminQuicker }) {
 
       {editing && (
         <div className="mt-4 space-y-3 border-t border-line pt-4">
-          <div className="space-y-1.5">
-            <Label htmlFor={`zone-${q.id}`}>Zona</Label>
-            <Input id={`zone-${q.id}`} value={zone} onChange={(e) => setZone(e.target.value)} className="border-line" />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor={`zone-${q.id}`}>Zona</Label>
+              <Input id={`zone-${q.id}`} value={zone} onChange={(e) => setZone(e.target.value)} className="border-line" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor={`phone-${q.id}`}>Celular</Label>
+              <Input id={`phone-${q.id}`} value={phone} onChange={(e) => setPhone(e.target.value)} className="border-line" placeholder="300 123 4567" />
+            </div>
           </div>
           <div>
             <Label className="mb-2 block">Habilidades</Label>
@@ -210,9 +231,14 @@ function QuickerRow({ q }: { q: AdminQuicker }) {
               ))}
             </div>
           </div>
-          <Button size="sm" disabled={update.isPending} className="bg-brand-600 text-white hover:bg-brand-700" onClick={save}>
-            Guardar cambios
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" disabled={update.isPending} className="bg-brand-600 text-white hover:bg-brand-700" onClick={save}>
+              Guardar cambios
+            </Button>
+            <Button size="sm" variant="outline" disabled={resetPw.isPending} onClick={resetPassword}>
+              <KeyRound className="size-4" /> Restablecer contraseña
+            </Button>
+          </div>
         </div>
       )}
     </li>
@@ -263,7 +289,7 @@ export default function Quickers() {
           ) : (
             <ul className="grid grid-cols-1 gap-3">
               {quickers.data.map((q) => (
-                <QuickerRow key={q.id} q={q} />
+                <QuickerRow key={q.id} q={q} onTempPassword={(email, pw) => setCreated({ email, pw })} />
               ))}
             </ul>
           )}

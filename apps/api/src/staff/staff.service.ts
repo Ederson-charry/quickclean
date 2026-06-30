@@ -35,6 +35,47 @@ export class StaffService {
       .catch(() => undefined);
   }
 
+  /**
+   * Regenera una contraseña temporal y fuerza el cambio en el próximo ingreso.
+   * Revoca las sesiones activas y notifica. Devuelve la contraseña temporal (una vez).
+   */
+  private async resetPasswordForUser(userId: string, role: "quicker" | "cliente", actorId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException("Usuario no encontrado");
+    }
+    const tempPassword = generateTempPassword();
+    const passwordHash = await this.password.hash(tempPassword);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.credential.upsert({
+        where: { userId },
+        update: { passwordHash, mustChangePassword: true, passwordChangedAt: new Date() },
+        create: { userId, passwordHash, mustChangePassword: true },
+      });
+      await tx.session.deleteMany({ where: { userId } });
+    });
+    await this.audit.record({
+      action: "staff.reset_password",
+      outcome: "success",
+      actorId,
+      resourceType: "user",
+      resourceId: userId,
+    });
+    await this.notifications
+      .send({
+        userId,
+        to: user.email,
+        kind: "password_reset",
+        subject: "Tu contraseña de QuickClean fue restablecida",
+        body:
+          `Un administrador restableció tu contraseña.\n` +
+          `Contraseña temporal: ${tempPassword}\n\n` +
+          "Deberás crear una contraseña nueva en tu próximo ingreso.",
+      })
+      .catch(() => undefined);
+    return { tempPassword };
+  }
+
   private async roleId(key: string, name: string): Promise<string> {
     const role = await this.prisma.role.upsert({
       where: { key },
@@ -56,7 +97,7 @@ export class StaffService {
     return this.prisma.quicker.findMany({
       orderBy: [{ active: "desc" }, { name: "asc" }],
       include: {
-        user: { select: { email: true, status: true } },
+        user: { select: { email: true, status: true, phone: true } },
         skills: { include: { serviceCategory: { select: { id: true, name: true } } } },
       },
     });
@@ -70,7 +111,7 @@ export class StaffService {
 
     const quicker = await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
-        data: { email: input.email, status: "active", emailVerifiedAt: new Date() },
+        data: { email: input.email, phone: input.phone, status: "active", emailVerifiedAt: new Date() },
       });
       await tx.credential.create({ data: { userId: user.id, passwordHash, mustChangePassword: true } });
       await tx.userRole.create({ data: { userId: user.id, roleId } });
@@ -114,6 +155,19 @@ export class StaffService {
           active: input.active ?? undefined,
         },
       });
+      if (input.phone !== undefined) {
+        await tx.user.update({ where: { id: quicker.userId }, data: { phone: input.phone || null } });
+      }
+      // Desactivar = también bloquear el acceso (status) y revocar sesiones.
+      if (input.active !== undefined) {
+        await tx.user.update({
+          where: { id: quicker.userId },
+          data: { status: input.active ? "active" : "inactive" },
+        });
+        if (!input.active) {
+          await tx.session.deleteMany({ where: { userId: quicker.userId } });
+        }
+      }
       if (input.skills) {
         await tx.quickerSkill.deleteMany({ where: { quickerId: id } });
         if (input.skills.length > 0) {
@@ -135,6 +189,15 @@ export class StaffService {
       after: { zone: updated.zone, active: updated.active, rating: updated.rating },
     });
     return updated;
+  }
+
+  resetQuickerPassword(id: string, actorId: string) {
+    return this.prisma.quicker.findUnique({ where: { id } }).then((q) => {
+      if (!q) {
+        throw new NotFoundException("Quicker no encontrado");
+      }
+      return this.resetPasswordForUser(q.userId, "quicker", actorId);
+    });
   }
 
   // ── Clientes ──────────────────────────────────────────────────────────────────
@@ -162,6 +225,8 @@ export class StaffService {
           userId: user.id,
           name: input.name,
           kind: input.kind,
+          docType: input.docType,
+          docNumber: input.docNumber,
           requiresDirectHire: input.requiresDirectHire ?? input.kind === "empresa",
         },
       });
@@ -185,13 +250,30 @@ export class StaffService {
     if (!client) {
       throw new NotFoundException("Cliente no encontrado");
     }
-    const updated = await this.prisma.client.update({
-      where: { id },
-      data: {
-        name: input.name ?? undefined,
-        kind: input.kind ?? undefined,
-        requiresDirectHire: input.requiresDirectHire ?? undefined,
-      },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const c = await tx.client.update({
+        where: { id },
+        data: {
+          name: input.name ?? undefined,
+          kind: input.kind ?? undefined,
+          docType: input.docType ?? undefined,
+          docNumber: input.docNumber ?? undefined,
+          requiresDirectHire: input.requiresDirectHire ?? undefined,
+        },
+      });
+      if (input.phone !== undefined) {
+        await tx.user.update({ where: { id: client.userId }, data: { phone: input.phone || null } });
+      }
+      if (input.active !== undefined) {
+        await tx.user.update({
+          where: { id: client.userId },
+          data: { status: input.active ? "active" : "inactive" },
+        });
+        if (!input.active) {
+          await tx.session.deleteMany({ where: { userId: client.userId } });
+        }
+      }
+      return c;
     });
     await this.audit.record({
       action: "staff.update_client",
@@ -202,5 +284,14 @@ export class StaffService {
       after: { kind: updated.kind, requiresDirectHire: updated.requiresDirectHire },
     });
     return updated;
+  }
+
+  resetClientPassword(id: string, actorId: string) {
+    return this.prisma.client.findUnique({ where: { id } }).then((c) => {
+      if (!c) {
+        throw new NotFoundException("Cliente no encontrado");
+      }
+      return this.resetPasswordForUser(c.userId, "cliente", actorId);
+    });
   }
 }

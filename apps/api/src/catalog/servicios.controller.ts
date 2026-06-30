@@ -1,9 +1,9 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { RequirePermissions } from "../common/decorators/permissions.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { CatalogService } from "./catalog.service";
-import { CreateCategoryInput } from "./catalog.schemas";
+import { CreateCategoryInput, UpdateCategoryInput } from "./catalog.schemas";
 
 @Controller("admin/servicios")
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -20,6 +20,12 @@ export class ServiciosController {
   @RequirePermissions("service.update")
   create(@Body() body: unknown) {
     return this.catalog.create(CreateCategoryInput.parse(body));
+  }
+
+  @Patch(":id")
+  @RequirePermissions("service.update")
+  update(@Param("id") id: string, @Body() body: unknown) {
+    return this.catalog.update(id, UpdateCategoryInput.parse(body));
   }
 
   @Post(":id/archivar")

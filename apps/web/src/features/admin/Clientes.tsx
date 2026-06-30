@@ -2,12 +2,14 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Building2, KeyRound, ShieldCheck, UserPlus, UserRound } from "lucide-react";
+import { Building2, FileText, KeyRound, Phone, ShieldCheck, UserPlus, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import {
   type AdminClient,
+  type DocType,
   useAdminClients,
   useCreateClient,
+  useResetClientPassword,
   useUpdateClient,
 } from "@/hooks/catalog";
 import { Badge } from "@/components/ui/badge";
@@ -19,10 +21,20 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/shared/States
 import { cn } from "@/lib/utils";
 import { useSession } from "@/stores/session";
 
+const DOC_TYPES: { value: DocType; label: string }[] = [
+  { value: "cc", label: "Cédula" },
+  { value: "nit", label: "NIT" },
+  { value: "ce", label: "C. Extranjería" },
+  { value: "pasaporte", label: "Pasaporte" },
+];
+const DOC_LABEL: Record<DocType, string> = { cc: "CC", nit: "NIT", ce: "CE", pasaporte: "Pasaporte" };
+
 const schema = z.object({
   email: z.string().email("Correo inválido"),
   name: z.string().min(2, "Nombre requerido"),
   kind: z.enum(["persona", "empresa"]),
+  docType: z.enum(["cc", "nit", "ce", "pasaporte"]).optional(),
+  docNumber: z.string().optional(),
   phone: z.string().optional(),
 });
 type FormValues = z.infer<typeof schema>;
@@ -67,6 +79,7 @@ function NewClientForm({ onCreated }: { onCreated: (email: string, pw: string) =
     defaultValues: { kind: "persona" },
   });
   const kind = watch("kind");
+  const docType = watch("docType");
 
   const onSubmit = async (data: FormValues) => {
     try {
@@ -74,6 +87,8 @@ function NewClientForm({ onCreated }: { onCreated: (email: string, pw: string) =
         email: data.email,
         name: data.name,
         kind: data.kind,
+        docType: data.docType,
+        docNumber: data.docNumber || undefined,
         phone: data.phone || undefined,
       });
       onCreated(data.email, res.tempPassword);
@@ -122,7 +137,29 @@ function NewClientForm({ onCreated }: { onCreated: (email: string, pw: string) =
           {errors.email && <p className="text-xs text-danger">{errors.email.message}</p>}
         </div>
         <div className="space-y-1.5 sm:col-span-2">
-          <Label htmlFor="c-phone">Teléfono (opcional)</Label>
+          <Label>Tipo de documento</Label>
+          <div className="flex flex-wrap gap-2">
+            {DOC_TYPES.map((d) => (
+              <button
+                key={d.value}
+                type="button"
+                onClick={() => setValue("docType", docType === d.value ? undefined : d.value)}
+                className={cn(
+                  "rounded-full border px-3 py-1.5 text-sm transition-colors",
+                  docType === d.value ? "border-brand-600 bg-brand-50 text-brand-700" : "border-line bg-surface text-ink-2 hover:border-brand-300",
+                )}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="c-docnum">Número de documento</Label>
+          <Input id="c-docnum" {...register("docNumber")} className="border-line" placeholder="1020304050" />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="c-phone">Teléfono</Label>
           <Input id="c-phone" {...register("phone")} className="border-line" placeholder="300 123 4567" />
         </div>
       </div>
@@ -140,17 +177,35 @@ function NewClientForm({ onCreated }: { onCreated: (email: string, pw: string) =
   );
 }
 
-function ClientRow({ c }: { c: AdminClient }) {
+function ClientRow({ c, onTempPassword }: { c: AdminClient; onTempPassword: (email: string, pw: string) => void }) {
   const update = useUpdateClient();
+  const resetPw = useResetClientPassword();
   const empresa = c.kind === "empresa";
-  const toggleDirectHire = () =>
+  const activo = c.user.status === "active";
+
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(c.name);
+  const [docType, setDocType] = useState<DocType | undefined>(c.docType ?? undefined);
+  const [docNumber, setDocNumber] = useState(c.docNumber ?? "");
+  const [phone, setPhone] = useState(c.user.phone ?? "");
+
+  const patch = (data: Parameters<typeof update.mutate>[0], ok = "Actualizado") =>
+    update.mutate(data, { onSuccess: () => toast.success(ok), onError: () => toast.error("No se pudo actualizar") });
+
+  const save = () =>
     update.mutate(
-      { id: c.id, requiresDirectHire: !c.requiresDirectHire },
-      { onSuccess: () => toast.success("Actualizado"), onError: () => toast.error("No se pudo actualizar") },
+      { id: c.id, name, docType, docNumber: docNumber || undefined, phone },
+      { onSuccess: () => { toast.success("Cliente actualizado"); setEditing(false); }, onError: () => toast.error("No se pudo actualizar") },
     );
 
+  const resetPassword = () =>
+    resetPw.mutate(c.id, {
+      onSuccess: (res) => onTempPassword(c.user.email, res.tempPassword),
+      onError: () => toast.error("No se pudo restablecer"),
+    });
+
   return (
-    <li className="rounded-xl border border-line bg-surface p-4 shadow-sm">
+    <li className={cn("rounded-xl border border-line bg-surface p-4 shadow-sm", !activo && "opacity-70")}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -161,20 +216,83 @@ function ClientRow({ c }: { c: AdminClient }) {
             <Badge className={empresa ? "bg-brand-100 text-brand-700" : "bg-muted text-ink-2"}>
               {empresa ? "Empresa" : "Persona"}
             </Badge>
+            <Badge className={activo ? "bg-success/10 text-success" : "bg-muted text-faint"}>
+              {activo ? "Activo" : "Inactivo"}
+            </Badge>
             {c.requiresDirectHire && <Badge className="bg-amber-100 text-amber-700">Contratación directa</Badge>}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-2">
             <span className="truncate text-faint">{c.user.email}</span>
-            {c.user.phone && <span>{c.user.phone}</span>}
+            {c.docType && <span className="inline-flex items-center gap-1"><FileText className="size-3" /> {DOC_LABEL[c.docType]} {c.docNumber}</span>}
+            {c.user.phone && <span className="inline-flex items-center gap-1"><Phone className="size-3" /> {c.user.phone}</span>}
           </div>
         </div>
-        {empresa && (
-          <div className="flex shrink-0 items-center gap-2">
-            <span className="text-xs text-ink-2">Directa</span>
-            <Switch checked={c.requiresDirectHire} onCheckedChange={toggleDirectHire} aria-label="Contratación directa" />
-          </div>
-        )}
+        <div className="flex shrink-0 items-center gap-2">
+          <Switch
+            checked={activo}
+            onCheckedChange={(v) => patch({ id: c.id, active: v }, v ? "Activado" : "Desactivado")}
+            aria-label="Activo"
+          />
+          <Button size="sm" variant="outline" onClick={() => setEditing((e) => !e)}>
+            {editing ? "Cerrar" : "Editar"}
+          </Button>
+        </div>
       </div>
+
+      {editing && (
+        <div className="mt-4 space-y-3 border-t border-line pt-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor={`name-${c.id}`}>{empresa ? "Razón social" : "Nombre"}</Label>
+              <Input id={`name-${c.id}`} value={name} onChange={(e) => setName(e.target.value)} className="border-line" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor={`phone-${c.id}`}>Teléfono</Label>
+              <Input id={`phone-${c.id}`} value={phone} onChange={(e) => setPhone(e.target.value)} className="border-line" placeholder="300 123 4567" />
+            </div>
+          </div>
+          <div>
+            <Label className="mb-2 block">Tipo de documento</Label>
+            <div className="flex flex-wrap gap-2">
+              {DOC_TYPES.map((d) => (
+                <button
+                  key={d.value}
+                  type="button"
+                  onClick={() => setDocType((cur) => (cur === d.value ? undefined : d.value))}
+                  className={cn(
+                    "rounded-full border px-3 py-1.5 text-sm transition-colors",
+                    docType === d.value ? "border-brand-600 bg-brand-50 text-brand-700" : "border-line bg-surface text-ink-2 hover:border-brand-300",
+                  )}
+                >
+                  {d.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor={`doc-${c.id}`}>Número de documento</Label>
+            <Input id={`doc-${c.id}`} value={docNumber} onChange={(e) => setDocNumber(e.target.value)} className="border-line" />
+          </div>
+          {empresa && (
+            <label className="flex items-center gap-2 text-sm text-ink-2">
+              <Switch
+                checked={c.requiresDirectHire}
+                onCheckedChange={(v) => patch({ id: c.id, requiresDirectHire: v })}
+                aria-label="Contratación directa"
+              />
+              Exige contratación laboral directa
+            </label>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" disabled={update.isPending} className="bg-brand-600 text-white hover:bg-brand-700" onClick={save}>
+              Guardar cambios
+            </Button>
+            <Button size="sm" variant="outline" disabled={resetPw.isPending} onClick={resetPassword}>
+              <KeyRound className="size-4" /> Restablecer contraseña
+            </Button>
+          </div>
+        </div>
+      )}
     </li>
   );
 }
@@ -223,7 +341,7 @@ export default function Clientes() {
           ) : (
             <ul className="grid grid-cols-1 gap-3">
               {clients.data.map((c) => (
-                <ClientRow key={c.id} c={c} />
+                <ClientRow key={c.id} c={c} onTempPassword={(email, pw) => setCreated({ email, pw })} />
               ))}
             </ul>
           )}

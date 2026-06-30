@@ -41,7 +41,7 @@ describe("StaffService (integración) — alta de quickers y clientes", () => {
 
   it("crea un quicker con usuario, credencial mustChange, rol y skills", async () => {
     const { quicker, tempPassword } = await svc.createQuicker(
-      { email: qEmail, name: "Nueva Quicker", zone: "Kennedy", skills: [categoryId] },
+      { email: qEmail, name: "Nueva Quicker", zone: "Kennedy", phone: "3001112233", skills: [categoryId] },
       adminId,
     );
     quickerId = quicker.id;
@@ -53,6 +53,7 @@ describe("StaffService (integración) — alta de quickers y clientes", () => {
     });
     createdUserIds.push(user!.id);
     expect(user?.credential?.mustChangePassword).toBe(true);
+    expect(user?.phone).toBe("3001112233");
     expect(user?.roles.some((r) => r.role.key === "quicker")).toBe(true);
     const skills = await prisma.quickerSkill.findMany({ where: { quickerId } });
     expect(skills).toHaveLength(1);
@@ -64,27 +65,63 @@ describe("StaffService (integración) — alta de quickers y clientes", () => {
     ).rejects.toThrow();
   });
 
-  it("actualiza zona/activo y reemplaza skills", async () => {
-    const updated = await svc.updateQuicker(quickerId, { zone: "Bosa", active: false, skills: [] }, adminId);
+  it("actualiza zona/teléfono y al desactivar bloquea el acceso (status inactive)", async () => {
+    const updated = await svc.updateQuicker(
+      quickerId,
+      { zone: "Bosa", phone: "3009998877", active: false, skills: [] },
+      adminId,
+    );
     expect(updated.zone).toBe("Bosa");
     expect(updated.active).toBe(false);
+    const user = await prisma.user.findUnique({ where: { id: createdUserIds[0] } });
+    expect(user?.phone).toBe("3009998877");
+    expect(user?.status).toBe("inactive");
     const skills = await prisma.quickerSkill.findMany({ where: { quickerId } });
     expect(skills).toHaveLength(0);
+    // reactivar restaura el acceso
+    await svc.updateQuicker(quickerId, { active: true }, adminId);
+    const reactivated = await prisma.user.findUnique({ where: { id: createdUserIds[0] } });
+    expect(reactivated?.status).toBe("active");
   });
 
-  it("crea una empresa con requiresDirectHire por defecto", async () => {
+  it("restablece la contraseña del quicker (temporal + mustChange)", async () => {
+    const { tempPassword } = await svc.resetQuickerPassword(quickerId, adminId);
+    expect(tempPassword.length).toBeGreaterThanOrEqual(12);
+    const user = await prisma.user.findUnique({ where: { id: createdUserIds[0] }, include: { credential: true } });
+    expect(user?.credential?.mustChangePassword).toBe(true);
+  });
+
+  it("crea una empresa con documento y requiresDirectHire por defecto", async () => {
     const { client, tempPassword } = await svc.createClient(
-      { email: cEmail, name: "Empresa Nueva SAS", kind: "empresa" },
+      { email: cEmail, name: "Empresa Nueva SAS", kind: "empresa", docType: "nit", docNumber: "900123456-7" },
       adminId,
     );
     clientId = client.id;
     expect(tempPassword.length).toBeGreaterThanOrEqual(12);
     expect(client.requiresDirectHire).toBe(true);
+    expect(client.docType).toBe("nit");
+    expect(client.docNumber).toBe("900123456-7");
     const user = await prisma.user.findUnique({
       where: { email: cEmail },
       include: { roles: { include: { role: true } } },
     });
     expect(user?.roles.some((r) => r.role.key === "client")).toBe(true);
+  });
+
+  it("actualiza documento del cliente y al desactivar bloquea acceso", async () => {
+    const updated = await svc.updateClient(clientId, { docType: "cc", docNumber: "1020304050", active: false }, adminId);
+    expect(updated.docType).toBe("cc");
+    const cl = await prisma.client.findUnique({ where: { id: clientId } });
+    const user = await prisma.user.findUnique({ where: { id: cl!.userId } });
+    expect(user?.status).toBe("inactive");
+  });
+
+  it("restablece la contraseña del cliente", async () => {
+    const { tempPassword } = await svc.resetClientPassword(clientId, adminId);
+    expect(tempPassword.length).toBeGreaterThanOrEqual(12);
+    const cl = await prisma.client.findUnique({ where: { id: clientId } });
+    const user = await prisma.user.findUnique({ where: { id: cl!.userId }, include: { credential: true } });
+    expect(user?.credential?.mustChangePassword).toBe(true);
   });
 
   it("lista quickers y clientes incluyendo los creados", async () => {
