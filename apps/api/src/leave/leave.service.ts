@@ -52,6 +52,45 @@ export class LeaveService {
     return this.prisma.leaveRequest.findMany({ where: { quickerId: q.id }, orderBy: { createdAt: "desc" } });
   }
 
+  /** Quickers activos para el selector del formulario admin. */
+  quickerOptions() {
+    return this.prisma.quicker.findMany({
+      where: { active: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, zone: true },
+    });
+  }
+
+  /**
+   * Crea una solicitud a nombre de un quicker (cargada por Operación). Puede
+   * quedar en revisión o aprobarse directamente si quien la carga lo decide.
+   */
+  async createForQuicker(quickerId: string, input: SubmitLeave, actorId: string, approve = false) {
+    const q = await this.prisma.quicker.findUnique({ where: { id: quickerId } });
+    if (!q) {
+      throw new NotFoundException("Quicker no encontrado");
+    }
+    const r = await this.prisma.leaveRequest.create({
+      data: {
+        quickerId,
+        kind: input.kind,
+        startDate: input.startDate,
+        endDate: input.endDate,
+        reason: input.reason,
+        ...(approve ? { status: "aprobada", reviewedById: actorId, reviewedAt: new Date() } : {}),
+      },
+    });
+    await this.audit.record({
+      action: "leave.create_admin",
+      outcome: "success",
+      actorId,
+      resourceType: "leave",
+      resourceId: r.id,
+      metadata: { quickerId, kind: input.kind, approved: approve },
+    });
+    return r;
+  }
+
   listAll(status?: string) {
     return this.prisma.leaveRequest.findMany({
       where: status ? { status: status as "en_revision" | "aprobada" | "rechazada" } : {},

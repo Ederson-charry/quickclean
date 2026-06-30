@@ -8,6 +8,17 @@ import { LeaveService } from "./leave.service";
 
 const DecideBody = z.object({ status: z.enum(["aprobada", "rechazada"]) });
 
+const CreateLeaveBody = z
+  .object({
+    quickerId: z.string().uuid(),
+    kind: z.enum(["incapacidad", "licencia", "vacaciones"]),
+    startDate: z.coerce.date(),
+    endDate: z.coerce.date(),
+    reason: z.string().trim().max(500).optional(),
+    approve: z.boolean().optional(),
+  })
+  .refine((d) => d.endDate >= d.startDate, { message: "La fecha de fin no puede ser anterior al inicio" });
+
 @Controller("admin/solicitudes")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @RequirePermissions("leave.manage")
@@ -17,6 +28,21 @@ export class AdminLeaveController {
   @Get()
   list(@Query("status") status?: string) {
     return this.leave.listAll(status);
+  }
+
+  @Get("quickers")
+  quickers() {
+    return this.leave.quickerOptions();
+  }
+
+  @Post()
+  create(@Body() body: unknown, @CurrentUser() user: AuthUser) {
+    const parsed = CreateLeaveBody.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.issues[0]?.message ?? "Solicitud inválida");
+    }
+    const { quickerId, approve, ...input } = parsed.data;
+    return this.leave.createForQuicker(quickerId, input, user.id, approve ?? false);
   }
 
   @Post(":id/decidir")

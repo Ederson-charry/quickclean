@@ -61,4 +61,30 @@ describe("LeaveService (integración)", () => {
     expect(decided.reviewedAt).not.toBeNull();
     await expect(svc.decide(leaveId, "rechazada", adminId)).rejects.toThrow();
   });
+
+  it("el admin carga una solicitud a nombre del quicker (en revisión)", async () => {
+    const r = await svc.createForQuicker(
+      quickerId,
+      { kind: "licencia", startDate: new Date("2026-08-01"), endDate: new Date("2026-08-03"), reason: "cargada por ops" },
+      adminId,
+    );
+    expect(r.quickerId).toBe(quickerId);
+    expect(r.status).toBe("en_revision");
+  });
+
+  it("el admin carga y aprueba en el acto", async () => {
+    const r = await svc.createForQuicker(
+      quickerId,
+      { kind: "vacaciones", startDate: new Date("2026-09-01"), endDate: new Date("2026-09-05") },
+      adminId,
+      true,
+    );
+    expect(r.status).toBe("aprobada");
+    expect(r.reviewedById).toBe(adminId);
+  });
+
+  it("quickerOptions incluye al quicker", async () => {
+    const opts = await svc.quickerOptions();
+    expect(opts.some((q) => q.id === quickerId)).toBe(true);
+  });
 });

@@ -1,20 +1,28 @@
 import { useState } from "react";
 import { differenceInDays, format } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarClock, Check, MapPin, X } from "lucide-react";
+import { CalendarClock, Check, MapPin, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/States";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   type AdminLeaveDTO,
   type LeaveKind,
   type LeaveStatus,
   useAdminLeaves,
+  useCreateAdminLeave,
   useDecideLeave,
+  useLeaveQuickerOptions,
 } from "@/hooks/catalog";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/stores/session";
+
+const KINDS: LeaveKind[] = ["incapacidad", "licencia", "vacaciones"];
 
 const KIND_LABEL: Record<LeaveKind, string> = {
   incapacidad: "Incapacidad",
@@ -97,18 +105,122 @@ function LeaveRow({ r }: { r: AdminLeaveDTO }) {
   );
 }
 
+function NewLeaveForm({ onDone }: { onDone: () => void }) {
+  const opts = useLeaveQuickerOptions(true);
+  const create = useCreateAdminLeave();
+  const [quickerId, setQuickerId] = useState("");
+  const [kind, setKind] = useState<LeaveKind>("incapacidad");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [reason, setReason] = useState("");
+  const [approve, setApprove] = useState(false);
+
+  const submit = async () => {
+    if (!quickerId || !from || !to) {
+      toast.error("Selecciona quicker y período");
+      return;
+    }
+    try {
+      await create.mutateAsync({ quickerId, kind, startDate: from, endDate: to, reason: reason || undefined, approve });
+      toast.success(approve ? "Solicitud cargada y aprobada" : "Solicitud cargada");
+      onDone();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo crear");
+    }
+  };
+
+  return (
+    <div className="rounded-xl border border-line bg-surface p-4 shadow-sm sm:p-5">
+      <h2 className="mb-4 flex items-center gap-2 font-semibold text-ink">
+        <Plus className="size-4 text-brand-600" /> Cargar solicitud por un quicker
+      </h2>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor="nl-quicker">Quicker</Label>
+          <Select value={quickerId} onValueChange={(v) => v && setQuickerId(v)}>
+            <SelectTrigger id="nl-quicker" className="w-full border-line">
+              <SelectValue placeholder="Selecciona un quicker">
+                {(v) => opts.data?.find((q) => q.id === v)?.name ?? "Selecciona un quicker"}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {opts.data?.map((q) => (
+                <SelectItem key={q.id} value={q.id}>{q.name} · {q.zone}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label>Tipo</Label>
+          <div className="flex flex-wrap gap-2">
+            {KINDS.map((k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setKind(k)}
+                className={cn(
+                  "rounded-full border px-3 py-1.5 text-sm capitalize transition-colors",
+                  kind === k ? "border-brand-600 bg-brand-50 text-brand-700" : "border-line bg-surface text-ink-2 hover:border-brand-300",
+                )}
+              >
+                {KIND_LABEL[k]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="nl-from">Desde</Label>
+          <Input id="nl-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="border-line" />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="nl-to">Hasta</Label>
+          <Input id="nl-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} className="border-line" />
+        </div>
+
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor="nl-reason">Motivo (opcional)</Label>
+          <Input id="nl-reason" value={reason} onChange={(e) => setReason(e.target.value)} className="border-line" placeholder="Ej. incapacidad médica por EPS" />
+        </div>
+      </div>
+
+      <label className="mt-4 flex items-center gap-2 text-sm text-ink-2">
+        <Switch checked={approve} onCheckedChange={setApprove} aria-label="Aprobar directamente" />
+        Aprobar directamente (sin revisión)
+      </label>
+
+      <Button disabled={create.isPending} className="mt-4 h-11 w-full bg-brand-600 font-semibold text-white hover:bg-brand-700 sm:w-auto sm:px-8" onClick={submit}>
+        {create.isPending ? "Cargando..." : "Cargar solicitud"}
+      </Button>
+    </div>
+  );
+}
+
 export default function Solicitudes() {
   const enabled = !!useSession((s) => s.accessToken);
   const [filter, setFilter] = useState("en_revision");
+  const [showForm, setShowForm] = useState(false);
   const leaves = useAdminLeaves(filter, enabled);
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="font-display text-2xl font-bold leading-tight text-ink">Solicitudes de ausencia</h1>
-        <p className="mt-1 text-sm text-ink-2">
-          Incapacidades, licencias y vacaciones de los quickers. Insumo de disponibilidad para la Torre de Control.
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-bold leading-tight text-ink">Solicitudes de ausencia</h1>
+          <p className="mt-1 text-sm text-ink-2">
+            Incapacidades, licencias y vacaciones de los quickers. Insumo de disponibilidad para la Torre de Control.
+          </p>
+        </div>
+        {enabled && (
+          <Button
+            variant={showForm ? "outline" : "default"}
+            className={showForm ? "" : "bg-brand-600 text-white hover:bg-brand-700"}
+            onClick={() => setShowForm((v) => !v)}
+          >
+            {showForm ? "Cerrar" : "Nueva solicitud"}
+          </Button>
+        )}
       </header>
 
       {!enabled ? (
@@ -117,6 +229,8 @@ export default function Solicitudes() {
         </div>
       ) : (
         <>
+          {showForm && <NewLeaveForm onDone={() => setShowForm(false)} />}
+
           <div className="flex flex-wrap gap-2">
             {FILTERS.map((f) => (
               <button

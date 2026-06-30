@@ -560,6 +560,38 @@ export function useDecideLeave() {
   });
 }
 
+export interface LeaveQuickerOption {
+  id: string;
+  name: string;
+  zone: string;
+}
+
+export function useLeaveQuickerOptions(enabled: boolean) {
+  return useQuery({
+    queryKey: ["admin-solicitudes-quickers"],
+    enabled,
+    queryFn: () => apiFetch<LeaveQuickerOption[]>("/admin/solicitudes/quickers", { headers: authHeaders() }),
+  });
+}
+
+export interface CreateAdminLeaveInput {
+  quickerId: string;
+  kind: LeaveKind;
+  startDate: string;
+  endDate: string;
+  reason?: string;
+  approve?: boolean;
+}
+
+export function useCreateAdminLeave() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateAdminLeaveInput) =>
+      apiFetch("/admin/solicitudes", { method: "POST", headers: authHeaders(), body: JSON.stringify(input) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-solicitudes"] }),
+  });
+}
+
 // ─── Torre de Control / asignación ────────────────────────────────────────────
 export interface AssignmentCandidate {
   quickerId: string;
