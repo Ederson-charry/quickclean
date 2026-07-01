@@ -1,13 +1,32 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import type { Booking } from "@prisma/client";
+import type { Booking, TariffComponent } from "@prisma/client";
+import { type ComponentDef, type SelectionRef, computeComponents } from "../catalog/components";
 import { isColombianHoliday } from "../catalog/holidays";
-import { computePrice } from "../catalog/pricing";
 import { AuditService } from "../audit/audit.service";
 import { NotificationService } from "../notifications/notification.service";
 import { PrismaService } from "../prisma/prisma.service";
 import type { CreateBookingInput } from "./booking.schemas";
 
 const copFmt = (n: number): string => `$${n.toLocaleString("es-CO")}`;
+
+/** Fila de componente de Prisma → definición para el motor. */
+function rowToComponent(c: TariffComponent): ComponentDef {
+  return {
+    code: c.code,
+    order: c.order,
+    label: c.label,
+    nature: c.nature as ComponentDef["nature"],
+    valueType: c.valueType as ComponentDef["valueType"],
+    value: c.value,
+    durationTable: (c.durationTable as Record<string, number> | null) ?? undefined,
+    appliesOn: c.appliesOn as ComponentDef["appliesOn"],
+    appliesOnRefs: (c.appliesOnRefs as SelectionRef[] | null) ?? undefined,
+    condParam: c.condParam,
+    condValue: c.condValue,
+    countsForPayout: c.countsForPayout,
+    visibleToClient: c.visibleToClient,
+  };
+}
 
 @Injectable()
 export class BookingService {
@@ -32,19 +51,23 @@ export class BookingService {
     const tariff = await this.prisma.tariff.findFirst({
       where: { serviceCategoryId: input.serviceCategoryId, status: "active" },
       orderBy: { effectiveFrom: "desc" },
-      include: { rules: true },
+      include: { components: { orderBy: { order: "asc" } } },
     });
-    if (!tariff) {
+    if (!tariff || tariff.components.length === 0) {
       throw new BadRequestException("La categoría no tiene tarifa vigente");
     }
 
-    const price = computePrice(tariff.rules, {
-      duration: input.duration,
-      frequency: input.frequency,
-      size: input.size,
-      supplies: input.supplies,
-      holiday: isColombianHoliday(input.scheduledAt),
-    });
+    const price = computeComponents(
+      tariff.components.map(rowToComponent),
+      { type: tariff.payoutType as "percent" | "fixed", value: tariff.payoutValue },
+      {
+        duration: input.duration,
+        frequency: input.frequency,
+        size: input.size,
+        supplies: input.supplies,
+        holiday: isColombianHoliday(input.scheduledAt),
+      },
+    );
 
     const booking = await this.prisma.booking.create({
       data: {
@@ -59,7 +82,7 @@ export class BookingService {
         address: input.address,
         notes: input.notes,
         pets: input.pets ?? false,
-        priceLabor: price.labor,
+        priceLabor: price.payoutBase,
         priceTotal: price.total,
         payout: price.payout,
       },

@@ -78,13 +78,38 @@ export interface ServiceCategory {
   createdAt: string;
 }
 
-export interface TariffRule {
-  id: string;
-  dimension: string;
-  key: string;
-  modifierType: string;
-  value: number;
+// ─── Modelo de componentes (composable) ──────────────────────────────────────
+export type Nature = "base" | "cost" | "discount";
+export type ValueType = "table" | "fixed" | "percent";
+export type AppliesOn = "base" | "subtotal" | "selection";
+export type PayoutType = "percent" | "fixed";
+export type CondParam = "size" | "frequency" | "duration" | "supplies" | "holiday";
+
+export interface SelectionRef {
+  code: string;
+  op: "add" | "sub";
 }
+
+/** Componente de una tarifa (bloque de construcción del precio). */
+export interface TariffComponentDTO {
+  id: string;
+  order: number;
+  code: string;
+  label: string;
+  nature: Nature;
+  valueType: ValueType;
+  value: number;
+  durationTable: Record<string, number> | null;
+  appliesOn: AppliesOn;
+  appliesOnRefs: SelectionRef[] | null;
+  condParam: CondParam | null;
+  condValue: string | null;
+  countsForPayout: boolean;
+  visibleToClient: boolean;
+}
+
+/** Componente en formularios de borrador (sin id, antes de publicar). */
+export type ComponentDraft = Omit<TariffComponentDTO, "id">;
 
 export interface Tariff {
   id: string;
@@ -95,20 +120,28 @@ export interface Tariff {
   status: "draft" | "scheduled" | "active" | "expired";
   publishedBy: string | null;
   publishedAt: string | null;
-  rules: TariffRule[];
+  payoutType: PayoutType;
+  payoutValue: number;
+  components: TariffComponentDTO[];
+}
+
+/** Una línea del desglose calculado (aporte firmado + fórmula legible). */
+export interface PriceLine {
+  code: string;
+  label: string;
+  nature: Nature;
+  amount: number;
+  formula: string;
+  countsForPayout: boolean;
+  visibleToClient: boolean;
 }
 
 export interface PriceBreakdown {
-  base: number;
-  sizeMultiplier: number;
-  frequencyDiscount: number;
-  suppliesCost: number;
-  platformFee: number;
-  holidayPct: number;
-  holidaySurcharge: number;
-  labor: number;
+  lines: PriceLine[];
   total: number;
-  payoutPct: number;
+  payoutBase: number;
+  payoutType: PayoutType;
+  payoutValue: number;
   payout: number;
 }
 
@@ -123,15 +156,10 @@ export interface PreviewInput {
   scheduledAt?: string;
 }
 
-export interface SimulateRule {
-  dimension: string;
-  key: string;
-  modifierType: string;
-  value: number;
-}
-
-export interface SimulateTariffInput {
-  rules: SimulateRule[];
+export interface SimulateComponentsInput {
+  payoutType: PayoutType;
+  payoutValue: number;
+  components: ComponentDraft[];
   duration: number;
   frequency: string;
   size: string;
@@ -243,7 +271,9 @@ export interface PublishInput {
   serviceCategoryId: string;
   name: string;
   effectiveFrom: string;
-  rules: { dimension: string; key: string; modifierType: string; value: number }[];
+  payoutType: PayoutType;
+  payoutValue: number;
+  components: ComponentDraft[];
   otp?: string;
 }
 
@@ -264,10 +294,10 @@ export function usePublishTariff() {
   });
 }
 
-/** Simula el precio con reglas de borrador (antes de publicar la versión). */
+/** Simula el precio con componentes de borrador (antes de publicar la versión). */
 export function useSimulateTariff() {
   return useMutation({
-    mutationFn: (input: SimulateTariffInput) =>
+    mutationFn: (input: SimulateComponentsInput) =>
       apiFetch<PriceBreakdown>("/admin/tarifas/simular", {
         method: "POST",
         headers: authHeaders(),

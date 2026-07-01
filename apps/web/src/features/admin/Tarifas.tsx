@@ -1,15 +1,23 @@
-import { useEffect, useMemo, useState } from "react";
-import { Calculator, CalendarClock, Info, Plus, ReceiptText, Tag, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Calculator,
+  CalendarClock,
+  Eye,
+  EyeOff,
+  Info,
+  Plus,
+  ReceiptText,
+  Tag,
+  Trash2,
+  Wallet,
+} from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -23,8 +31,15 @@ import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/States";
 import {
+  type AppliesOn,
+  type ComponentDraft,
+  type CondParam,
+  type Nature,
+  type PayoutType,
   type PriceBreakdown,
   type Tariff,
+  type TariffComponentDTO,
+  type ValueType,
   useDeactivateTariff,
   usePublishTariff,
   useServiceCategories,
@@ -61,6 +76,8 @@ const SIZES = [
   { v: "L", l: "Grande" },
 ];
 
+const pct = (n: number): string => `${Math.round(n * 100)}%`;
+
 function Card({ title, icon: Icon, children }: { title: string; icon: typeof Tag; children: React.ReactNode }) {
   return (
     <section className="rounded-xl border border-line bg-surface p-5 shadow-sm">
@@ -73,16 +90,57 @@ function Card({ title, icon: Icon, children }: { title: string; icon: typeof Tag
   );
 }
 
-function PriceRow({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+/** Una línea del desglose (aporte firmado, con signo y color según naturaleza). */
+function LineRow({
+  label,
+  formula,
+  amount,
+  nature,
+  muted,
+}: {
+  label: string;
+  formula?: string;
+  amount: number;
+  nature: Nature;
+  muted?: boolean;
+}) {
+  const sign = amount < 0 ? "−" : nature === "base" ? "" : "+";
+  const color = nature === "discount" ? "text-success" : nature === "base" ? "text-ink" : "text-ink-2";
   return (
-    <div
-      className={cn(
-        "flex items-center justify-between py-1.5 text-sm",
-        strong && "border-t border-line pt-2 font-semibold text-ink",
-      )}
-    >
-      <span className={cn(strong ? "text-ink" : "text-ink-2")}>{label}</span>
-      <span className={cn("tabular-nums", strong ? "text-brand-700" : "text-ink")}>{value}</span>
+    <div className="flex items-start justify-between gap-3 py-1 text-sm">
+      <span className={cn("min-w-0", muted ? "text-faint" : "text-ink-2")}>
+        {label}
+        {formula && <span className="block text-[11px] text-faint">{formula}</span>}
+      </span>
+      <span className={cn("shrink-0 font-mono tabular-nums", color)}>
+        {sign} {cop(Math.abs(amount))}
+      </span>
+    </div>
+  );
+}
+
+/** Desglose calculado (líneas dinámicas + total + pago al quicker). */
+function Breakdown({ b }: { b: PriceBreakdown }) {
+  return (
+    <div className="space-y-0.5">
+      {b.lines.map((l) => (
+        <LineRow key={l.code} label={l.label} formula={l.formula} amount={l.amount} nature={l.nature} muted={!l.visibleToClient} />
+      ))}
+      <div className="mt-2 flex items-center justify-between border-t border-line pt-2 text-sm font-semibold">
+        <span className="text-ink">Total al cliente</span>
+        <span className="font-mono tabular-nums text-brand-700">{cop(b.total)}</span>
+      </div>
+      <div className="mt-1 rounded-md bg-success/5 p-2">
+        <div className="flex items-center justify-between text-sm font-medium">
+          <span className="text-ink">Pago al quicker</span>
+          <span className="font-mono tabular-nums text-success">{cop(b.payout)}</span>
+        </div>
+        <p className="mt-0.5 text-[11px] text-ink-2">
+          {b.payoutType === "fixed"
+            ? "Valor fijo por servicio"
+            : `${pct(b.payoutValue)} sobre ${cop(b.payoutBase)} (componentes marcados)`}
+        </p>
+      </div>
     </div>
   );
 }
@@ -125,7 +183,7 @@ function Previewer({ categoryId }: { categoryId: string | undefined }) {
           <Label className="text-xs text-ink-2">Frecuencia</Label>
           <Select value={frequency} onValueChange={(v) => setFrequency(v ?? "unica")}>
             <SelectTrigger>
-              <SelectValue />
+              <SelectValue>{(v) => FREQUENCIES.find((f) => f.v === v)?.l ?? String(v)}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {FREQUENCIES.map((f) => (
@@ -140,7 +198,7 @@ function Previewer({ categoryId }: { categoryId: string | undefined }) {
           <Label className="text-xs text-ink-2">Tamaño</Label>
           <Select value={size} onValueChange={(v) => setSize(v ?? "M")}>
             <SelectTrigger>
-              <SelectValue />
+              <SelectValue>{(v) => SIZES.find((s) => s.v === v)?.l ?? String(v)}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {SIZES.map((s) => (
@@ -163,16 +221,7 @@ function Previewer({ categoryId }: { categoryId: string | undefined }) {
         {isError ? (
           <p className="py-4 text-center text-sm text-faint">Esta categoría no tiene tarifa vigente.</p>
         ) : data ? (
-          <div>
-            <PriceRow label="Base por duración" value={cop(data.base)} />
-            <PriceRow label="Multiplicador tamaño" value={`× ${data.sizeMultiplier}`} />
-            <PriceRow label="Descuento frecuencia" value={`− ${Math.round(data.frequencyDiscount * 100)}%`} />
-            <PriceRow label="Mano de obra" value={cop(data.labor)} />
-            {data.suppliesCost > 0 && <PriceRow label="Insumos" value={cop(data.suppliesCost)} />}
-            <PriceRow label="Comisión plataforma" value={cop(data.platformFee)} />
-            <PriceRow label="Total cliente" value={cop(data.total)} strong />
-            <PriceRow label="Pago al quicker" value={cop(data.payout)} />
-          </div>
+          <Breakdown b={data} />
         ) : (
           <p className="py-4 text-center text-sm text-faint">Selecciona una categoría.</p>
         )}
@@ -181,59 +230,134 @@ function Previewer({ categoryId }: { categoryId: string | undefined }) {
   );
 }
 
-// ─── Diálogo: publicar nueva versión ──────────────────────────────────────────
-const DIMENSION_OPTS = [
-  { v: "duration", l: "Duración (base $)" },
-  { v: "frequency", l: "Frecuencia (% desc.)" },
-  { v: "size", l: "Tamaño (×)" },
-  { v: "supplies", l: "Insumos ($)" },
-  { v: "platform_fee", l: "Comisión ($)" },
-  { v: "payout_pct", l: "Pago quicker (%)" },
-  { v: "holiday", l: "Recargo festivo (%)" },
+// ─── Editor de componentes ────────────────────────────────────────────────────
+const NATURE_OPTS: { v: Nature; l: string }[] = [
+  { v: "base", l: "Tarifa base" },
+  { v: "cost", l: "Costo adicional" },
+  { v: "discount", l: "Descuento" },
 ];
-const dimLabel = (v: string) => DIMENSION_OPTS.find((o) => o.v === v)?.l ?? v;
+const natureLabel = (v: string) => NATURE_OPTS.find((o) => o.v === v)?.l ?? v;
 
-const MODIFIER_OPTS = [
-  { v: "base", l: "Base ($)" },
+const VALUETYPE_BASE: { v: ValueType; l: string }[] = [
+  { v: "table", l: "Tabla por duración" },
+  { v: "fixed", l: "Valor fijo ($)" },
+];
+const VALUETYPE_MOD: { v: ValueType; l: string }[] = [
+  { v: "fixed", l: "Valor fijo ($)" },
   { v: "percent", l: "Porcentaje (%)" },
-  { v: "multiplier", l: "Multiplicador (×)" },
-  { v: "flat", l: "Fijo ($)" },
 ];
-const modLabel = (v: string) => MODIFIER_OPTS.find((o) => o.v === v)?.l ?? v;
+const valueTypeLabel = (v: string) =>
+  [...VALUETYPE_BASE, ...VALUETYPE_MOD].find((o) => o.v === v)?.l ?? v;
 
-// Dimensiones "globales": un único valor para toda la tarifa → la clave va vacía.
-const SCALAR_DIMS = new Set(["supplies", "platform_fee", "payout_pct", "holiday"]);
-// Ejemplos de clave para las dimensiones con variantes.
-const KEY_PLACEHOLDER: Record<string, string> = {
-  duration: "4, 6, 8…",
-  frequency: "unica, semanal…",
-  size: "S, M, L",
-};
-const isScalar = (dim: string) => SCALAR_DIMS.has(dim);
+const APPLIESON_OPTS: { v: AppliesOn; l: string }[] = [
+  { v: "base", l: "el valor base" },
+  { v: "subtotal", l: "el subtotal acumulado" },
+  { v: "selection", l: "una selección de componentes" },
+];
+const appliesOnLabel = (v: string) => APPLIESON_OPTS.find((o) => o.v === v)?.l ?? v;
 
-interface EditRule {
-  dimension: string;
-  key: string;
-  modifierType: string;
-  value: string;
+const COND_OPTS: { v: "" | CondParam; l: string }[] = [
+  { v: "", l: "Siempre" },
+  { v: "size", l: "Según tamaño" },
+  { v: "frequency", l: "Según frecuencia" },
+  { v: "duration", l: "Según duración" },
+  { v: "supplies", l: "Solo con insumos" },
+  { v: "holiday", l: "Solo en día festivo" },
+];
+const condLabel = (v: string) => COND_OPTS.find((o) => o.v === v)?.l ?? v;
+
+interface EditComp {
+  code: string;
+  label: string;
+  nature: Nature;
+  valueType: ValueType;
+  value: string; // fijo: pesos; porcentaje: número (15 = 15%)
+  durationTable: Record<string, string>;
+  appliesOn: AppliesOn;
+  appliesOnRefs: { code: string; op: "add" | "sub" }[];
+  condParam: "" | CondParam;
+  condValue: string;
+  countsForPayout: boolean;
+  visibleToClient: boolean;
 }
 
-function defaultRules(active: Tariff | null | undefined): EditRule[] {
-  if (active && active.rules.length) {
-    return active.rules.map((r) => ({
-      dimension: r.dimension,
-      key: r.key,
-      modifierType: r.modifierType,
-      value: String(r.value),
-    }));
+const emptyDurationTable = (): Record<string, string> => Object.fromEntries(DURATIONS.map((d) => [d, ""]));
+
+function fromDTO(c: TariffComponentDTO): EditComp {
+  return {
+    code: c.code,
+    label: c.label,
+    nature: c.nature,
+    valueType: c.valueType,
+    value: c.valueType === "percent" ? String(Math.round(c.value * 10000) / 100) : c.valueType === "fixed" ? String(c.value) : "0",
+    durationTable: { ...emptyDurationTable(), ...Object.fromEntries(Object.entries(c.durationTable ?? {}).map(([k, v]) => [k, String(v)])) },
+    appliesOn: c.appliesOn,
+    appliesOnRefs: c.appliesOnRefs ?? [],
+    condParam: c.condParam ?? "",
+    condValue: c.condValue ?? "",
+    countsForPayout: c.countsForPayout,
+    visibleToClient: c.visibleToClient,
+  };
+}
+
+function defaultComps(active: Tariff | null | undefined): EditComp[] {
+  if (active && active.components.length) {
+    return [...active.components].sort((a, b) => a.order - b.order).map(fromDTO);
   }
   return [
-    { dimension: "duration", key: "4", modifierType: "base", value: "79900" },
-    { dimension: "frequency", key: "unica", modifierType: "percent", value: "0" },
-    { dimension: "size", key: "M", modifierType: "multiplier", value: "1.15" },
-    { dimension: "platform_fee", key: "", modifierType: "flat", value: "6900" },
-    { dimension: "payout_pct", key: "", modifierType: "percent", value: "0.7" },
+    {
+      code: "base",
+      label: "Tarifa base",
+      nature: "base",
+      valueType: "table",
+      value: "0",
+      durationTable: { "4": "79900", "6": "109900", "8": "139900" },
+      appliesOn: "base",
+      appliesOnRefs: [],
+      condParam: "",
+      condValue: "",
+      countsForPayout: true,
+      visibleToClient: true,
+    },
+    {
+      code: "comision",
+      label: "Comisión de plataforma",
+      nature: "cost",
+      valueType: "fixed",
+      value: "6900",
+      durationTable: emptyDurationTable(),
+      appliesOn: "base",
+      appliesOnRefs: [],
+      condParam: "",
+      condValue: "",
+      countsForPayout: false,
+      visibleToClient: true,
+    },
   ];
+}
+
+/** EditComp (con value en % legible) → ComponentDraft para el backend. */
+function toDraft(c: EditComp, index: number): ComponentDraft {
+  const num = Number(c.value) || 0;
+  const isCond = c.condParam !== "";
+  return {
+    order: index,
+    code: c.code,
+    label: c.label.trim() || c.code,
+    nature: c.nature,
+    valueType: c.valueType,
+    value: c.valueType === "percent" ? num / 100 : c.valueType === "fixed" ? num : 0,
+    durationTable:
+      c.valueType === "table"
+        ? Object.fromEntries(Object.entries(c.durationTable).map(([k, v]) => [k, Number(v) || 0]))
+        : null,
+    appliesOn: c.valueType === "percent" ? c.appliesOn : "base",
+    appliesOnRefs: c.valueType === "percent" && c.appliesOn === "selection" ? c.appliesOnRefs : null,
+    condParam: isCond ? (c.condParam as CondParam) : null,
+    condValue: !isCond ? null : c.condParam === "supplies" || c.condParam === "holiday" ? "true" : c.condValue,
+    countsForPayout: c.countsForPayout,
+    visibleToClient: c.visibleToClient,
+  };
 }
 
 function localNow(): string {
@@ -245,101 +369,240 @@ function localNow(): string {
 const publishSchema = z.object({
   name: z.string().min(2),
   effectiveFrom: z.string().min(1),
-  rules: z
-    .array(
-      z.object({
-        dimension: z.string().min(1),
-        key: z.string(),
-        modifierType: z.string().min(1),
-        value: z.coerce.number(),
-      }),
-    )
-    .min(1),
-  otp: z.string().optional(),
 });
 
-// Desglose "de dónde sale cada valor" de la simulación.
-function pct(n: number): string {
-  return `${Math.round(n * 100)}%`;
-}
+/** Tarjeta editable de un componente. */
+function ComponentCard({
+  c,
+  index,
+  total,
+  earlier,
+  onChange,
+  onMove,
+  onRemove,
+}: {
+  c: EditComp;
+  index: number;
+  total: number;
+  earlier: EditComp[];
+  onChange: (patch: Partial<EditComp>) => void;
+  onMove: (dir: -1 | 1) => void;
+  onRemove: () => void;
+}) {
+  const valueTypeOpts = c.nature === "base" ? VALUETYPE_BASE : VALUETYPE_MOD;
 
-function SimBreakdown({ b, duration, size }: { b: PriceBreakdown; duration: string; size: string }) {
-  const freqFactor = 1 - b.frequencyDiscount;
   return (
-    <div className="mt-3 space-y-2 border-t border-brand-200 pt-3 text-sm">
-      <p className="text-xs font-semibold text-brand-700">¿De dónde sale cada valor?</p>
+    <div className="rounded-lg border border-line bg-bg/40 p-3">
+      <div className="mb-2 flex items-center gap-2">
+        <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-brand-100 text-[11px] font-semibold text-brand-700">
+          {index + 1}
+        </span>
+        <Input
+          value={c.label}
+          onChange={(e) => onChange({ label: e.target.value })}
+          placeholder="Nombre del componente"
+          className="h-8 flex-1 font-medium"
+        />
+        <Button type="button" variant="ghost" size="icon-sm" aria-label="Subir" onClick={() => onMove(-1)} disabled={index === 0}>
+          <ArrowUp className="size-4" />
+        </Button>
+        <Button type="button" variant="ghost" size="icon-sm" aria-label="Bajar" onClick={() => onMove(1)} disabled={index === total - 1}>
+          <ArrowDown className="size-4" />
+        </Button>
+        <Button type="button" variant="ghost" size="icon-sm" aria-label="Quitar componente" onClick={onRemove} disabled={total <= 1}>
+          <Trash2 className="size-4" />
+        </Button>
+      </div>
 
-      {/* Mano de obra */}
-      <div className="rounded-md bg-white/70 p-2">
-        <div className="flex justify-between text-ink-2">
-          <span>Base ({duration}h)</span>
-          <span className="font-mono">{cop(b.base)}</span>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="space-y-1">
+          <Label className="text-[11px] text-ink-2">Tipo</Label>
+          <Select
+            value={c.nature}
+            onValueChange={(v) => {
+              const nature = (v ?? "cost") as Nature;
+              // Al cambiar de/hacia base, ajusta el tipo de valor a uno válido.
+              const valueType: ValueType = nature === "base" ? "table" : c.valueType === "table" ? "fixed" : c.valueType;
+              onChange({ nature, valueType });
+            }}
+          >
+            <SelectTrigger className="h-8">
+              <SelectValue>{(v) => natureLabel(v as string)}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {NATURE_OPTS.map((o) => (
+                <SelectItem key={o.v} value={o.v}>
+                  {o.l}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <div className="flex justify-between text-ink-2">
-          <span>× Ajuste por tamaño ({size})</span>
-          <span className="font-mono">× {b.sizeMultiplier}</span>
+        <div className="space-y-1">
+          <Label className="text-[11px] text-ink-2">Cómo se calcula</Label>
+          <Select value={c.valueType} onValueChange={(v) => onChange({ valueType: (v ?? "fixed") as ValueType })}>
+            <SelectTrigger className="h-8">
+              <SelectValue>{(v) => valueTypeLabel(v as string)}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {valueTypeOpts.map((o) => (
+                <SelectItem key={o.v} value={o.v}>
+                  {o.l}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        {b.frequencyDiscount > 0 && (
-          <div className="flex justify-between text-ink-2">
-            <span>× (1 − descuento frecuencia {pct(b.frequencyDiscount)})</span>
-            <span className="font-mono">× {freqFactor.toFixed(2)}</span>
+      </div>
+
+      {/* Valor según el tipo de cálculo */}
+      {c.valueType === "table" ? (
+        <div className="mt-2 space-y-1">
+          <Label className="text-[11px] text-ink-2">Precio por duración ($)</Label>
+          <div className="grid grid-cols-3 gap-2">
+            {DURATIONS.map((d) => (
+              <div key={d} className="space-y-0.5">
+                <span className="text-[10px] text-faint">{d} horas</span>
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  value={c.durationTable[d] ?? ""}
+                  onChange={(e) => onChange({ durationTable: { ...c.durationTable, [d]: e.target.value } })}
+                  className="h-8"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="space-y-1">
+            <Label className="text-[11px] text-ink-2">{c.valueType === "percent" ? "Porcentaje (%)" : "Valor ($)"}</Label>
+            <Input
+              type="number"
+              step="any"
+              inputMode="decimal"
+              value={c.value}
+              onChange={(e) => onChange({ value: e.target.value })}
+              className="h-8"
+            />
+          </div>
+          {c.valueType === "percent" && (
+            <div className="space-y-1">
+              <Label className="text-[11px] text-ink-2">Se calcula sobre</Label>
+              <Select value={c.appliesOn} onValueChange={(v) => onChange({ appliesOn: (v ?? "base") as AppliesOn })}>
+                <SelectTrigger className="h-8">
+                  <SelectValue>{(v) => appliesOnLabel(v as string)}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {APPLIESON_OPTS.map((o) => (
+                    <SelectItem key={o.v} value={o.v}>
+                      {o.l}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Selección firmada de componentes previos (solo % sobre selección) */}
+      {c.valueType === "percent" && c.appliesOn === "selection" && (
+        <div className="mt-2 rounded-md border border-dashed border-line p-2">
+          <p className="mb-1 text-[11px] font-medium text-ink-2">Sumar o restar componentes anteriores:</p>
+          {earlier.length === 0 ? (
+            <p className="text-[11px] text-faint">No hay componentes antes de este.</p>
+          ) : (
+            <div className="space-y-1">
+              {earlier.map((e) => {
+                const ref = c.appliesOnRefs.find((r) => r.code === e.code);
+                const cur = ref?.op ?? "";
+                return (
+                  <div key={e.code} className="flex items-center justify-between gap-2">
+                    <span className="min-w-0 truncate text-[12px] text-ink-2">{e.label || e.code}</span>
+                    <Select
+                      value={cur}
+                      onValueChange={(v) => {
+                        const op = v ?? "";
+                        const rest = c.appliesOnRefs.filter((r) => r.code !== e.code);
+                        onChange({ appliesOnRefs: op === "" ? rest : [...rest, { code: e.code, op: op as "add" | "sub" }] });
+                      }}
+                    >
+                      <SelectTrigger className="h-7 w-28">
+                        <SelectValue>{(v) => (v === "add" ? "Sumar" : v === "sub" ? "Restar" : "—")}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">— (ignorar)</SelectItem>
+                        <SelectItem value="add">Sumar</SelectItem>
+                        <SelectItem value="sub">Restar</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Condición de aplicación */}
+      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="space-y-1">
+          <Label className="text-[11px] text-ink-2">Se aplica</Label>
+          <Select
+            value={c.condParam}
+            onValueChange={(v) => onChange({ condParam: (v ?? "") as "" | CondParam, condValue: "" })}
+          >
+            <SelectTrigger className="h-8">
+              <SelectValue>{(v) => condLabel(v as string)}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {COND_OPTS.map((o) => (
+                <SelectItem key={o.v} value={o.v}>
+                  {o.l}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {(c.condParam === "size" || c.condParam === "frequency" || c.condParam === "duration") && (
+          <div className="space-y-1">
+            <Label className="text-[11px] text-ink-2">Valor</Label>
+            <Select value={c.condValue} onValueChange={(v) => onChange({ condValue: v ?? "" })}>
+              <SelectTrigger className="h-8">
+                <SelectValue placeholder="Elige…" />
+              </SelectTrigger>
+              <SelectContent>
+                {(c.condParam === "size" ? SIZES : c.condParam === "frequency" ? FREQUENCIES : DURATIONS.map((d) => ({ v: d, l: `${d} horas` }))).map(
+                  (o) => (
+                    <SelectItem key={o.v} value={o.v}>
+                      {o.l}
+                    </SelectItem>
+                  ),
+                )}
+              </SelectContent>
+            </Select>
           </div>
         )}
-        <div className="mt-1 flex justify-between border-t border-line pt-1 font-medium text-ink">
-          <span>= Mano de obra</span>
-          <span className="font-mono">{cop(b.labor)}</span>
-        </div>
       </div>
 
-      {/* Conceptos que suman al total */}
-      {b.suppliesCost > 0 && (
-        <div className="flex items-center justify-between">
-          <span className="text-ink-2">Insumos (valor fijo)</span>
-          <span className="font-mono text-ink">+ {cop(b.suppliesCost)}</span>
-        </div>
-      )}
-      {b.holidaySurcharge > 0 && (
-        <div className="flex items-center justify-between">
-          <span className="text-ink-2">
-            Recargo festivo <span className="text-[11px] text-faint">(Mano de obra × {pct(b.holidayPct)})</span>
-          </span>
-          <span className="font-mono text-warning">+ {cop(b.holidaySurcharge)}</span>
-        </div>
-      )}
-      <div className="flex items-center justify-between">
-        <span className="text-ink-2">Comisión plataforma (valor fijo)</span>
-        <span className="font-mono text-ink">+ {cop(b.platformFee)}</span>
-      </div>
-
-      {/* Total */}
-      <div className="rounded-md bg-brand-100/70 p-2">
-        <div className="flex justify-between font-semibold text-ink">
-          <span>Total al cliente</span>
-          <span className="font-mono">{cop(b.total)}</span>
-        </div>
-        <p className="mt-0.5 text-[11px] text-ink-2">
-          {cop(b.labor)}
-          {b.suppliesCost > 0 ? ` + ${cop(b.suppliesCost)} insumos` : ""}
-          {b.holidaySurcharge > 0 ? ` + ${cop(b.holidaySurcharge)} festivo` : ""}
-          {` + ${cop(b.platformFee)} comisión`}
-        </p>
-      </div>
-
-      {/* Pago al quicker */}
-      <div className="rounded-md bg-white/70 p-2">
-        <div className="flex justify-between font-medium text-ink">
-          <span>Pago al quicker <span className="text-[11px] text-faint">({pct(b.payoutPct)})</span></span>
-          <span className="font-mono text-success">{cop(b.payout)}</span>
-        </div>
-        <p className="mt-0.5 text-[11px] text-ink-2">
-          ({cop(b.labor)}
-          {b.holidaySurcharge > 0 ? ` + ${cop(b.holidaySurcharge)} festivo` : ""}) × {pct(b.payoutPct)}
-        </p>
+      {/* Flags */}
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line pt-2">
+        <label className="flex items-center gap-2 text-[12px] text-ink-2">
+          <Switch checked={c.countsForPayout} onCheckedChange={(v) => onChange({ countsForPayout: v })} aria-label="Cuenta para el pago" />
+          <Wallet className="size-3.5 text-faint" /> Cuenta para el pago al quicker
+        </label>
+        <label className="flex items-center gap-2 text-[12px] text-ink-2">
+          <Switch checked={c.visibleToClient} onCheckedChange={(v) => onChange({ visibleToClient: v })} aria-label="Visible al cliente" />
+          {c.visibleToClient ? <Eye className="size-3.5 text-faint" /> : <EyeOff className="size-3.5 text-faint" />} Visible al cliente
+        </label>
       </div>
     </div>
   );
 }
 
+// ─── Diálogo: publicar nueva versión ──────────────────────────────────────────
 function PublishDialog({
   categoryId,
   active,
@@ -353,9 +616,12 @@ function PublishDialog({
 }) {
   const publish = usePublishTariff();
   const simulate = useSimulateTariff();
+  const seq = useRef(0);
   const [name, setName] = useState("");
   const [effectiveFrom, setEffectiveFrom] = useState(localNow());
-  const [rules, setRules] = useState<EditRule[]>(defaultRules(active));
+  const [comps, setComps] = useState<EditComp[]>(defaultComps(active));
+  const [payoutType, setPayoutType] = useState<PayoutType>("percent");
+  const [payoutValue, setPayoutValue] = useState("70");
   const [otp, setOtp] = useState("");
   const [sim, setSim] = useState({ duration: "4", frequency: "unica", size: "M", supplies: false, holiday: false });
   const [simResult, setSimResult] = useState<PriceBreakdown | null>(null);
@@ -364,22 +630,60 @@ function PublishDialog({
     if (open) {
       setName("");
       setEffectiveFrom(localNow());
-      setRules(defaultRules(active));
+      setComps(defaultComps(active));
+      setPayoutType(active?.payoutType ?? "percent");
+      setPayoutValue(
+        active ? (active.payoutType === "percent" ? String(Math.round(active.payoutValue * 10000) / 100) : String(active.payoutValue)) : "70",
+      );
       setOtp("");
       setSimResult(null);
     }
   }, [open, active]);
 
+  const setComp = (i: number, patch: Partial<EditComp>) =>
+    setComps((cs) => cs.map((c, idx) => (idx === i ? { ...c, ...patch } : c)));
+
+  const moveComp = (i: number, dir: -1 | 1) =>
+    setComps((cs) => {
+      const j = i + dir;
+      if (j < 0 || j >= cs.length) return cs;
+      const next = [...cs];
+      [next[i], next[j]] = [next[j], next[i]];
+      return next;
+    });
+
+  const addComp = () => {
+    seq.current += 1;
+    setComps((cs) => [
+      ...cs,
+      {
+        code: `comp_${seq.current}`,
+        label: "Nuevo componente",
+        nature: "cost",
+        valueType: "fixed",
+        value: "0",
+        durationTable: emptyDurationTable(),
+        appliesOn: "base",
+        appliesOnRefs: [],
+        condParam: "",
+        condValue: "",
+        countsForPayout: true,
+        visibleToClient: true,
+      },
+    ]);
+  };
+
+  const payoutConfig = () => ({
+    payoutType,
+    payoutValue: payoutType === "percent" ? (Number(payoutValue) || 0) / 100 : Number(payoutValue) || 0,
+  });
+
   const runSimulation = () => {
     setSimResult(null);
     simulate.mutate(
       {
-        rules: rules.map((r) => ({
-          dimension: r.dimension,
-          key: isScalar(r.dimension) ? "" : r.key,
-          modifierType: r.modifierType,
-          value: Number(r.value) || 0,
-        })),
+        ...payoutConfig(),
+        components: comps.map(toDraft),
         duration: Number(sim.duration) || 0,
         frequency: sim.frequency,
         size: sim.size,
@@ -390,13 +694,14 @@ function PublishDialog({
     );
   };
 
-  const setRule = (i: number, patch: Partial<EditRule>) =>
-    setRules((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
-
   const submit = () => {
-    const parsed = publishSchema.safeParse({ name, effectiveFrom, rules, otp });
+    const parsed = publishSchema.safeParse({ name, effectiveFrom });
     if (!parsed.success) {
-      toast.error("Revisa el nombre, la vigencia y las reglas.");
+      toast.error("Revisa el nombre y la vigencia.");
+      return;
+    }
+    if (!comps.some((c) => c.nature === "base")) {
+      toast.error("Agrega al menos un componente de tarifa base.");
       return;
     }
     publish.mutate(
@@ -404,8 +709,9 @@ function PublishDialog({
         serviceCategoryId: categoryId,
         name: parsed.data.name,
         effectiveFrom: new Date(parsed.data.effectiveFrom).toISOString(),
-        rules: parsed.data.rules.map((r) => ({ ...r, key: isScalar(r.dimension) ? "" : r.key })),
-        otp: parsed.data.otp || undefined,
+        ...payoutConfig(),
+        components: comps.map(toDraft),
+        otp: otp || undefined,
       },
       {
         onSuccess: () => {
@@ -419,7 +725,7 @@ function PublishDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="font-display">Nueva versión de tarifa</DialogTitle>
         </DialogHeader>
@@ -439,108 +745,86 @@ function PublishDialog({
             </div>
           </div>
 
+          {/* Componentes */}
           <div>
             <div className="mb-2 flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <Label className="text-xs text-ink-2">Reglas de precio</Label>
+                <Label className="text-xs text-ink-2">Componentes del precio</Label>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger
                       type="button"
-                      className="text-faint transition-colors hover:text-brand-600 focus-visible:outline-none focus-visible:text-brand-600"
-                      aria-label="Cómo funcionan las reglas"
+                      className="text-faint transition-colors hover:text-brand-600 focus-visible:text-brand-600 focus-visible:outline-none"
+                      aria-label="Cómo funcionan los componentes"
                     >
                       <Info className="size-3.5" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
-                      <p className="mb-1 font-semibold">Cómo funciona una regla</p>
+                      <p className="mb-1 font-semibold">Cómo se arma el precio</p>
                       <p className="mb-1">
-                        <b>Dimensión</b>: qué define (duración, tamaño, comisión…). <b>Clave</b>: la variante (4h, M,
-                        semanal…) — solo para duración, frecuencia y tamaño. <b>Modificador</b> y <b>valor</b>: cómo se
-                        aplica.
+                        Los componentes se calculan <b>en orden, de arriba hacia abajo</b>. Empieza con una{" "}
+                        <b>tarifa base</b>; luego suma <b>costos</b> o resta <b>descuentos</b>.
                       </p>
                       <p className="text-white/80">
-                        Comisión, pago quicker, insumos y festivo son valores únicos → van sin clave.
+                        Un porcentaje se calcula sobre el valor base, sobre el subtotal acumulado, o sobre una selección
+                        de componentes anteriores (que puedes sumar o restar). Marca qué componentes cuentan para el pago
+                        al quicker.
                       </p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setRules((rs) => [...rs, { dimension: "duration", key: "", modifierType: "base", value: "0" }])}
-              >
-                <Plus className="size-4" /> Regla
+              <Button type="button" variant="outline" size="sm" onClick={addComp}>
+                <Plus className="size-4" /> Componente
               </Button>
             </div>
             <div className="space-y-2">
-              {rules.map((r, i) => (
-                <div
-                  key={i}
-                  className="grid grid-cols-[1fr_auto] items-end gap-2 rounded-lg border border-line p-2 sm:grid-cols-[1.4fr_0.8fr_1fr_0.9fr_auto]"
-                >
-                  <Select
-                    value={r.dimension}
-                    onValueChange={(v) => {
-                      const dim = v ?? "duration";
-                      setRule(i, { dimension: dim, key: isScalar(dim) ? "" : r.key });
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue>{(v) => dimLabel(v as string)}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DIMENSION_OPTS.map((o) => (
-                        <SelectItem key={o.v} value={o.v}>
-                          {o.l}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    placeholder={isScalar(r.dimension) ? "(sin clave)" : (KEY_PLACEHOLDER[r.dimension] ?? "clave")}
-                    value={isScalar(r.dimension) ? "" : r.key}
-                    onChange={(e) => setRule(i, { key: e.target.value })}
-                    disabled={isScalar(r.dimension)}
-                    title={isScalar(r.dimension) ? "Esta dimensión es un valor único: no lleva clave" : undefined}
-                  />
-                  <Select value={r.modifierType} onValueChange={(v) => setRule(i, { modifierType: v ?? "base" })}>
-                    <SelectTrigger>
-                      <SelectValue>{(v) => modLabel(v as string)}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MODIFIER_OPTS.map((o) => (
-                        <SelectItem key={o.v} value={o.v}>
-                          {o.l}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    type="number"
-                    step="any"
-                    placeholder="valor"
-                    value={r.value}
-                    onChange={(e) => setRule(i, { value: e.target.value })}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Quitar regla"
-                    onClick={() => setRules((rs) => rs.filter((_, idx) => idx !== i))}
-                    disabled={rules.length <= 1}
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </div>
+              {comps.map((c, i) => (
+                <ComponentCard
+                  key={c.code}
+                  c={c}
+                  index={i}
+                  total={comps.length}
+                  earlier={comps.slice(0, i)}
+                  onChange={(patch) => setComp(i, patch)}
+                  onMove={(dir) => moveComp(i, dir)}
+                  onRemove={() => setComps((cs) => cs.filter((_, idx) => idx !== i))}
+                />
               ))}
             </div>
           </div>
 
-          {/* Simulación del cálculo con las reglas de arriba (antes de publicar) */}
+          {/* Pago al quicker */}
+          <div className="rounded-lg border border-line p-3">
+            <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-ink">
+              <Wallet className="size-4 text-brand-600" /> Pago al quicker
+            </p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label className="text-[11px] text-ink-2">Modo</Label>
+                <Select value={payoutType} onValueChange={(v) => setPayoutType((v ?? "percent") as PayoutType)}>
+                  <SelectTrigger className="h-8">
+                    <SelectValue>{(v) => (v === "fixed" ? "Valor fijo ($)" : "Porcentaje (%)")}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="percent">Porcentaje (%)</SelectItem>
+                    <SelectItem value="fixed">Valor fijo ($)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] text-ink-2">{payoutType === "percent" ? "Porcentaje (%)" : "Valor ($)"}</Label>
+                <Input type="number" step="any" value={payoutValue} onChange={(e) => setPayoutValue(e.target.value)} className="h-8" />
+              </div>
+            </div>
+            <p className="mt-1.5 text-[11px] text-ink-2">
+              {payoutType === "percent"
+                ? "Se calcula sobre los componentes marcados como «cuenta para el pago»."
+                : "El quicker recibe este valor fijo por servicio."}
+            </p>
+          </div>
+
+          {/* Simulación */}
           <div className="rounded-lg border border-brand-200 bg-brand-50/40 p-3">
             <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-brand-700">
               <Calculator className="size-4" /> Simular precio (sin publicar)
@@ -548,15 +832,48 @@ function PublishDialog({
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               <div className="space-y-1">
                 <Label className="text-[11px] text-ink-2">Duración</Label>
-                <Input value={sim.duration} onChange={(e) => setSim((s) => ({ ...s, duration: e.target.value }))} className="h-8" />
+                <Select value={sim.duration} onValueChange={(v) => setSim((s) => ({ ...s, duration: v ?? "4" }))}>
+                  <SelectTrigger className="h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DURATIONS.map((d) => (
+                      <SelectItem key={d} value={d}>
+                        {d} h
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1">
                 <Label className="text-[11px] text-ink-2">Frecuencia</Label>
-                <Input value={sim.frequency} onChange={(e) => setSim((s) => ({ ...s, frequency: e.target.value }))} className="h-8" />
+                <Select value={sim.frequency} onValueChange={(v) => setSim((s) => ({ ...s, frequency: v ?? "unica" }))}>
+                  <SelectTrigger className="h-8">
+                    <SelectValue>{(v) => FREQUENCIES.find((f) => f.v === v)?.l ?? String(v)}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {FREQUENCIES.map((f) => (
+                      <SelectItem key={f.v} value={f.v}>
+                        {f.l}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1">
                 <Label className="text-[11px] text-ink-2">Tamaño</Label>
-                <Input value={sim.size} onChange={(e) => setSim((s) => ({ ...s, size: e.target.value }))} className="h-8" />
+                <Select value={sim.size} onValueChange={(v) => setSim((s) => ({ ...s, size: v ?? "M" }))}>
+                  <SelectTrigger className="h-8">
+                    <SelectValue>{(v) => SIZES.find((s) => s.v === v)?.l ?? String(v)}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SIZES.map((s) => (
+                      <SelectItem key={s.v} value={s.v}>
+                        {s.l}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex items-end gap-2 pb-1">
                 <Switch checked={sim.supplies} onCheckedChange={(v) => setSim((s) => ({ ...s, supplies: v }))} aria-label="Insumos" />
@@ -572,7 +889,11 @@ function PublishDialog({
                 {simulate.isPending ? "Calculando…" : "Simular"}
               </Button>
             </div>
-            {simResult && <SimBreakdown b={simResult} duration={sim.duration} size={sim.size} />}
+            {simResult && (
+              <div className="mt-3 border-t border-brand-200 pt-3">
+                <Breakdown b={simResult} />
+              </div>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -641,12 +962,7 @@ function TariffPanel({ categoryId, enabled }: { categoryId: string | undefined; 
           >
             <Plus className="size-4" /> Nueva versión
           </Button>
-          <PublishDialog
-            categoryId={categoryId}
-            active={active}
-            open={showPublish}
-            onClose={() => setShowPublish(false)}
-          />
+          <PublishDialog categoryId={categoryId} active={active} open={showPublish} onClose={() => setShowPublish(false)} />
         </div>
       )}
       {active ? (
@@ -657,12 +973,14 @@ function TariffPanel({ categoryId, enabled }: { categoryId: string | undefined; 
           </div>
           <p className="mt-1 flex items-center gap-1.5 text-xs text-ink-2">
             <CalendarClock className="size-3.5" aria-hidden="true" />
-            Vigente desde {fechaCorta(active.effectiveFrom)} · {active.rules.length} reglas
+            Vigente desde {fechaCorta(active.effectiveFrom)} · {active.components.length} componentes
           </p>
           <div className="mt-3 border-t border-success/20 pt-3">
             {confirmOff ? (
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-medium text-danger">¿Desactivar esta tarifa? La categoría quedará sin tarifa vigente.</span>
+                <span className="text-xs font-medium text-danger">
+                  ¿Desactivar esta tarifa? La categoría quedará sin tarifa vigente.
+                </span>
                 <Button
                   size="sm"
                   variant="outline"
@@ -670,17 +988,27 @@ function TariffPanel({ categoryId, enabled }: { categoryId: string | undefined; 
                   disabled={deactivate.isPending}
                   onClick={() =>
                     deactivate.mutate(active.id, {
-                      onSuccess: () => { toast.success("Tarifa desactivada"); setConfirmOff(false); },
+                      onSuccess: () => {
+                        toast.success("Tarifa desactivada");
+                        setConfirmOff(false);
+                      },
                       onError: () => toast.error("No se pudo desactivar"),
                     })
                   }
                 >
                   Sí, desactivar
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => setConfirmOff(false)}>Cancelar</Button>
+                <Button size="sm" variant="ghost" onClick={() => setConfirmOff(false)}>
+                  Cancelar
+                </Button>
               </div>
             ) : (
-              <Button size="sm" variant="outline" className="border-danger/40 text-danger hover:bg-danger/5" onClick={() => setConfirmOff(true)}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-danger/40 text-danger hover:bg-danger/5"
+                onClick={() => setConfirmOff(true)}
+              >
                 Desactivar tarifa
               </Button>
             )}
@@ -692,9 +1020,7 @@ function TariffPanel({ categoryId, enabled }: { categoryId: string | undefined; 
         </p>
       )}
 
-      <h3 className="mb-2 mt-5 text-xs font-semibold uppercase tracking-wide text-ink-2">
-        Historial de versiones
-      </h3>
+      <h3 className="mb-2 mt-5 text-xs font-semibold uppercase tracking-wide text-ink-2">Historial de versiones</h3>
       <ul className="flex flex-col gap-2">
         {history.length === 0 ? (
           <li className="text-sm text-faint">Sin versiones.</li>
@@ -755,7 +1081,9 @@ export default function Tarifas() {
             </Label>
             <Select value={categoryId} onValueChange={(v) => setCategoryId(v ?? undefined)}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecciona…" />
+                <SelectValue placeholder="Selecciona…">
+                  {(v) => categories.find((c) => c.id === v)?.name ?? "Selecciona…"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {categories.map((c) => (

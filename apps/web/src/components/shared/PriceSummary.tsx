@@ -33,7 +33,9 @@ export function PriceSummary({
   className,
 }: PriceSummaryProps) {
   const price = useBookingPrice({ duration, frequency, supplies, size, serviceCategoryId, date, time });
-  const holiday = price.breakdown?.holidaySurcharge ?? 0;
+  // Líneas visibles al cliente (el motor marca cuáles ocultar, p. ej. comisión interna).
+  const clientLines = price.breakdown?.lines.filter((l) => l.visibleToClient) ?? [];
+  const holiday = clientLines.find((l) => l.code === "festivo")?.amount ?? 0;
 
   return (
     <div className={`rounded-xl border border-line bg-surface p-4 ${className ?? ""}`}>
@@ -47,24 +49,22 @@ export function PriceSummary({
       <div className="space-y-2 text-sm">
         {price.isReal && price.breakdown ? (
           <>
-            <Row label={`Servicio base (${duration}h)`} value={cop(price.breakdown.base)} />
-            {price.breakdown.sizeMultiplier !== 1 && (
-              <Row label="Ajuste por tamaño" value={`× ${price.breakdown.sizeMultiplier}`} />
-            )}
-            {price.breakdown.frequencyDiscount > 0 && (
+            {clientLines.map((line) => (
               <Row
-                label={FREQ_LABELS[frequency]}
-                value={`−${Math.round(price.breakdown.frequencyDiscount * 100)}%`}
-                valueClass="text-success"
+                key={line.code}
+                label={line.nature === "base" ? `${line.label} (${duration}h)` : line.label}
+                value={`${line.amount < 0 ? "−" : ""}${cop(Math.abs(line.amount))}`}
+                valueClass={
+                  line.nature === "discount"
+                    ? "text-success"
+                    : line.code === "festivo"
+                      ? "text-warning"
+                      : line.nature === "base"
+                        ? "text-ink"
+                        : "text-ink-2"
+                }
               />
-            )}
-            {price.breakdown.suppliesCost > 0 && (
-              <Row label="Implementos de aseo" value={cop(price.breakdown.suppliesCost)} />
-            )}
-            {holiday > 0 && (
-              <Row label="Recargo día festivo" value={cop(holiday)} valueClass="text-warning" />
-            )}
-            <Row label="Tarifa plataforma" value={cop(price.breakdown.platformFee)} valueClass="text-ink-2" />
+            ))}
           </>
         ) : (
           <>
