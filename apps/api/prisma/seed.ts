@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import * as argon2 from "argon2";
+import { rulesToComponents } from "../src/catalog/components";
 
 const prisma = new PrismaClient();
 
@@ -238,7 +239,33 @@ async function main(): Promise<void> {
     }
   }
 
-  console.log("Seed listo. admin/cliente/empresa + catálogo + tarifa + 3 quickers (Carolina con contrato laboral empresa)");
+  // Modelo de componentes: genera componentes para las tarifas que no los tengan.
+  const pendientes = await prisma.tariff.findMany({ where: { components: { none: {} } }, include: { rules: true } });
+  for (const t of pendientes) {
+    if (t.rules.length === 0) continue;
+    const { components, payout } = rulesToComponents(t.rules as unknown as Parameters<typeof rulesToComponents>[0]);
+    await prisma.tariff.update({ where: { id: t.id }, data: { payoutType: payout.type, payoutValue: payout.value } });
+    await prisma.tariffComponent.createMany({
+      data: components.map((c) => ({
+        tariffId: t.id,
+        order: c.order,
+        code: c.code,
+        label: c.label,
+        nature: c.nature,
+        valueType: c.valueType,
+        value: c.value,
+        durationTable: c.durationTable ?? undefined,
+        appliesOn: c.appliesOn,
+        appliesOnRefs: (c.appliesOnRefs ?? undefined) as object | undefined,
+        condParam: c.condParam ?? null,
+        condValue: c.condValue ?? null,
+        countsForPayout: c.countsForPayout,
+        visibleToClient: c.visibleToClient,
+      })),
+    });
+  }
+
+  console.log("Seed listo. admin/cliente/empresa + catálogo + tarifa + 3 quickers (Carolina con contrato laboral empresa) + componentes de tarifa");
 }
 
 main()

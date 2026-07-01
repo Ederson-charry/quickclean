@@ -2,9 +2,31 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import type { Tariff, TariffRule } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../prisma/prisma.service";
+import type { Prisma } from "@prisma/client";
+import type { ComponentDef } from "./components";
+import { rulesToComponents } from "./components";
 import type { PriceRule } from "./pricing";
 import type { PublishTariffInput } from "./catalog.schemas";
 import { type PriceBreakdown, type PriceInput, computePrice } from "./pricing";
+
+/** Mapea componentes al formato de creación de Prisma. */
+function componentCreateData(comps: ComponentDef[]): Prisma.TariffComponentCreateWithoutTariffInput[] {
+  return comps.map((c) => ({
+    order: c.order,
+    code: c.code,
+    label: c.label,
+    nature: c.nature,
+    valueType: c.valueType,
+    value: c.value,
+    durationTable: (c.durationTable ?? undefined) as Prisma.InputJsonValue | undefined,
+    appliesOn: c.appliesOn,
+    appliesOnRefs: (c.appliesOnRefs ?? undefined) as Prisma.InputJsonValue | undefined,
+    condParam: c.condParam ?? null,
+    condValue: c.condValue ?? null,
+    countsForPayout: c.countsForPayout,
+    visibleToClient: c.visibleToClient,
+  }));
+}
 
 type TariffWithRules = Tariff & { rules: TariffRule[] };
 
@@ -20,7 +42,7 @@ export class TariffService {
     return this.prisma.tariff.findFirst({
       where: { serviceCategoryId, status: "active" },
       orderBy: { effectiveFrom: "desc" },
-      include: { rules: true },
+      include: { rules: true, components: { orderBy: { order: "asc" } } },
     });
   }
 
@@ -29,7 +51,7 @@ export class TariffService {
     return this.prisma.tariff.findMany({
       where: { serviceCategoryId },
       orderBy: { effectiveFrom: "desc" },
-      include: { rules: true },
+      include: { rules: true, components: { orderBy: { order: "asc" } } },
     });
   }
 
@@ -54,6 +76,8 @@ export class TariffService {
           data: { effectiveTo: input.effectiveFrom, status: "expired" },
         });
       }
+      // Modelo nuevo: derivar componentes + pago desde las reglas recibidas.
+      const { components, payout } = rulesToComponents(input.rules as PriceRule[]);
       const created = await tx.tariff.create({
         data: {
           serviceCategoryId: input.serviceCategoryId,
@@ -62,6 +86,8 @@ export class TariffService {
           status,
           publishedBy: actorId,
           publishedAt: now,
+          payoutType: payout.type,
+          payoutValue: payout.value,
           rules: {
             create: input.rules.map((r) => ({
               dimension: r.dimension,
@@ -70,6 +96,7 @@ export class TariffService {
               value: r.value,
             })),
           },
+          components: { create: componentCreateData(components) },
         },
         include: { rules: true },
       });
@@ -103,6 +130,33 @@ export class TariffService {
   /** Simula el precio con un conjunto de reglas de borrador (antes de publicar). */
   simulate(rules: PriceRule[], input: PriceInput): PriceBreakdown {
     return computePrice(rules, input);
+  }
+
+  /**
+   * Genera los componentes (modelo nuevo) para las tarifas que aún no los tienen,
+   * derivándolos de sus reglas. Idempotente. Devuelve cuántas tarifas se migraron.
+   */
+  async backfillComponents(): Promise<{ migrated: number }> {
+    const tariffs = await this.prisma.tariff.findMany({
+      where: { components: { none: {} } },
+      include: { rules: true },
+    });
+    let migrated = 0;
+    for (const t of tariffs) {
+      if (t.rules.length === 0) continue;
+      const { components, payout } = rulesToComponents(t.rules as unknown as PriceRule[]);
+      await this.prisma.$transaction(async (tx) => {
+        await tx.tariff.update({
+          where: { id: t.id },
+          data: { payoutType: payout.type, payoutValue: payout.value },
+        });
+        await tx.tariffComponent.createMany({
+          data: componentCreateData(components).map((c) => ({ ...c, tariffId: t.id })),
+        });
+      });
+      migrated++;
+    }
+    return { migrated };
   }
 
   /** Desactiva una tarifa vigente/programada (status expired + cierra vigencia). Auditado. */
