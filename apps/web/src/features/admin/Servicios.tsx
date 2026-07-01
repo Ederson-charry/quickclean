@@ -47,6 +47,10 @@ function CategoryDialog({ open, cat, onClose }: { open: boolean; cat: ServiceCat
     sortOrder: "0",
   });
   const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const [iconSearch, setIconSearch] = useState("");
+  const iconNames = iconSearch
+    ? SERVICE_ICON_NAMES.filter((n) => n.toLowerCase().includes(iconSearch.toLowerCase()))
+    : SERVICE_ICON_NAMES;
 
   // Carga los valores al abrir en modo edición (o limpia al crear).
   useEffect(() => {
@@ -119,31 +123,41 @@ function CategoryDialog({ open, cat, onClose }: { open: boolean; cat: ServiceCat
           </div>
           {/* Selector visual de icono */}
           <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Label className="text-xs text-ink-2">Icono</Label>
               <span className="inline-flex items-center gap-1.5 rounded-md bg-brand-50 px-2 py-0.5 text-xs text-brand-700">
                 <ServiceIcon name={form.iconName} className="size-3.5" /> {form.iconName}
               </span>
+              <Input
+                value={iconSearch}
+                onChange={(e) => setIconSearch(e.target.value)}
+                placeholder="Buscar icono…"
+                className="ml-auto h-8 w-40 text-xs"
+              />
             </div>
-            <div className="grid grid-cols-6 gap-2 rounded-lg border border-line p-2 sm:grid-cols-8">
-              {SERVICE_ICON_NAMES.map((name) => (
-                <button
-                  key={name}
-                  type="button"
-                  title={name}
-                  aria-label={name}
-                  aria-pressed={form.iconName === name}
-                  onClick={() => set("iconName")(name)}
-                  className={cn(
-                    "flex aspect-square items-center justify-center rounded-md border transition-colors",
-                    form.iconName === name
-                      ? "border-brand-600 bg-brand-50 text-brand-700"
-                      : "border-transparent text-ink-2 hover:bg-bg hover:text-ink",
-                  )}
-                >
-                  <ServiceIcon name={name} className="size-5" />
-                </button>
-              ))}
+            <div className="grid max-h-52 grid-cols-6 gap-2 overflow-y-auto rounded-lg border border-line p-2 sm:grid-cols-8">
+              {iconNames.length === 0 ? (
+                <p className="col-span-full py-4 text-center text-xs text-faint">Sin resultados para “{iconSearch}”.</p>
+              ) : (
+                iconNames.map((name) => (
+                  <button
+                    key={name}
+                    type="button"
+                    title={name}
+                    aria-label={name}
+                    aria-pressed={form.iconName === name}
+                    onClick={() => set("iconName")(name)}
+                    className={cn(
+                      "flex aspect-square items-center justify-center rounded-md border transition-colors",
+                      form.iconName === name
+                        ? "border-brand-600 bg-brand-50 text-brand-700"
+                        : "border-transparent text-ink-2 hover:bg-bg hover:text-ink",
+                    )}
+                  >
+                    <ServiceIcon name={name} className="size-5" />
+                  </button>
+                ))
+              )}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
