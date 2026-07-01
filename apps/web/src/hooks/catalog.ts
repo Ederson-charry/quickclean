@@ -104,6 +104,7 @@ export interface PriceBreakdown {
   frequencyDiscount: number;
   suppliesCost: number;
   platformFee: number;
+  holidaySurcharge: number;
   labor: number;
   total: number;
   payout: number;
@@ -115,6 +116,23 @@ export interface PreviewInput {
   frequency: string;
   size: string;
   supplies: boolean;
+  holiday?: boolean;
+}
+
+export interface SimulateRule {
+  dimension: string;
+  key: string;
+  modifierType: string;
+  value: number;
+}
+
+export interface SimulateTariffInput {
+  rules: SimulateRule[];
+  duration: number;
+  frequency: string;
+  size: string;
+  supplies: boolean;
+  holiday?: boolean;
 }
 
 function authHeaders(): Record<string, string> {
@@ -235,6 +253,31 @@ export function usePublishTariff() {
         headers: authHeaders(),
         body: JSON.stringify(input),
       }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tarifas"] });
+      qc.invalidateQueries({ queryKey: ["precio"] });
+    },
+  });
+}
+
+/** Simula el precio con reglas de borrador (antes de publicar la versión). */
+export function useSimulateTariff() {
+  return useMutation({
+    mutationFn: (input: SimulateTariffInput) =>
+      apiFetch<PriceBreakdown>("/admin/tarifas/simular", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify(input),
+      }),
+  });
+}
+
+/** Desactiva una tarifa (status expired). */
+export function useDeactivateTariff() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<Tariff>(`/admin/tarifas/${id}/desactivar`, { method: "POST", headers: authHeaders() }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tarifas"] });
       qc.invalidateQueries({ queryKey: ["precio"] });

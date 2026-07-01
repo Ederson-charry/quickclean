@@ -22,9 +22,12 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/States";
 import {
+  type PriceBreakdown,
   type Tariff,
+  useDeactivateTariff,
   usePublishTariff,
   useServiceCategories,
+  useSimulateTariff,
   useTariffs,
   usePricePreview,
 } from "@/hooks/catalog";
@@ -185,6 +188,7 @@ const DIMENSION_OPTS = [
   { v: "supplies", l: "Insumos ($)" },
   { v: "platform_fee", l: "Comisión ($)" },
   { v: "payout_pct", l: "Pago quicker (%)" },
+  { v: "holiday", l: "Recargo festivo (%)" },
 ];
 const MODIFIER_OPTS = [
   { v: "base", l: "base" },
@@ -252,10 +256,13 @@ function PublishDialog({
   onClose: () => void;
 }) {
   const publish = usePublishTariff();
+  const simulate = useSimulateTariff();
   const [name, setName] = useState("");
   const [effectiveFrom, setEffectiveFrom] = useState(localNow());
   const [rules, setRules] = useState<EditRule[]>(defaultRules(active));
   const [otp, setOtp] = useState("");
+  const [sim, setSim] = useState({ duration: "4", frequency: "unica", size: "M", supplies: false, holiday: false });
+  const [simResult, setSimResult] = useState<PriceBreakdown | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -263,8 +270,29 @@ function PublishDialog({
       setEffectiveFrom(localNow());
       setRules(defaultRules(active));
       setOtp("");
+      setSimResult(null);
     }
   }, [open, active]);
+
+  const runSimulation = () => {
+    setSimResult(null);
+    simulate.mutate(
+      {
+        rules: rules.map((r) => ({
+          dimension: r.dimension,
+          key: r.key,
+          modifierType: r.modifierType,
+          value: Number(r.value) || 0,
+        })),
+        duration: Number(sim.duration) || 0,
+        frequency: sim.frequency,
+        size: sim.size,
+        supplies: sim.supplies,
+        holiday: sim.holiday,
+      },
+      { onSuccess: (b) => setSimResult(b), onError: () => toast.error("No se pudo simular") },
+    );
+  };
 
   const setRule = (i: number, patch: Partial<EditRule>) =>
     setRules((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
@@ -380,6 +408,52 @@ function PublishDialog({
             </div>
           </div>
 
+          {/* Simulación del cálculo con las reglas de arriba (antes de publicar) */}
+          <div className="rounded-lg border border-brand-200 bg-brand-50/40 p-3">
+            <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-brand-700">
+              <Calculator className="size-4" /> Simular precio (sin publicar)
+            </p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="space-y-1">
+                <Label className="text-[11px] text-ink-2">Duración</Label>
+                <Input value={sim.duration} onChange={(e) => setSim((s) => ({ ...s, duration: e.target.value }))} className="h-8" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] text-ink-2">Frecuencia</Label>
+                <Input value={sim.frequency} onChange={(e) => setSim((s) => ({ ...s, frequency: e.target.value }))} className="h-8" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] text-ink-2">Tamaño</Label>
+                <Input value={sim.size} onChange={(e) => setSim((s) => ({ ...s, size: e.target.value }))} className="h-8" />
+              </div>
+              <div className="flex items-end gap-2 pb-1">
+                <Switch checked={sim.supplies} onCheckedChange={(v) => setSim((s) => ({ ...s, supplies: v }))} aria-label="Insumos" />
+                <span className="text-xs text-ink-2">Insumos</span>
+              </div>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2 text-xs text-ink-2">
+                <Switch checked={sim.holiday} onCheckedChange={(v) => setSim((s) => ({ ...s, holiday: v }))} aria-label="Día festivo" />
+                Día festivo
+              </label>
+              <Button type="button" size="sm" variant="outline" onClick={runSimulation} disabled={simulate.isPending}>
+                {simulate.isPending ? "Calculando…" : "Simular"}
+              </Button>
+            </div>
+            {simResult && (
+              <div className="mt-3 space-y-1 border-t border-brand-200 pt-2 text-sm">
+                <PriceRow label="Mano de obra" value={cop(simResult.labor)} />
+                {simResult.suppliesCost > 0 && <PriceRow label="Insumos" value={cop(simResult.suppliesCost)} />}
+                {simResult.holidaySurcharge > 0 && (
+                  <PriceRow label="Recargo festivo" value={cop(simResult.holidaySurcharge)} />
+                )}
+                <PriceRow label="Comisión plataforma" value={cop(simResult.platformFee)} />
+                <PriceRow label="Total al cliente" value={cop(simResult.total)} strong />
+                <PriceRow label="Pago al quicker" value={cop(simResult.payout)} />
+              </div>
+            )}
+          </div>
+
           <div className="space-y-1.5">
             <Label htmlFor="t-otp" className="text-xs text-ink-2">
               Código 2FA (si está activo)
@@ -417,7 +491,9 @@ function PublishDialog({
 // ─── Tarifa vigente + historial ───────────────────────────────────────────────
 function TariffPanel({ categoryId, enabled }: { categoryId: string | undefined; enabled: boolean }) {
   const { data, isLoading, isError, refetch } = useTariffs(categoryId, enabled);
+  const deactivate = useDeactivateTariff();
   const [showPublish, setShowPublish] = useState(false);
+  const [confirmOff, setConfirmOff] = useState(false);
 
   if (!enabled) {
     return (
@@ -462,6 +538,32 @@ function TariffPanel({ categoryId, enabled }: { categoryId: string | undefined; 
             <CalendarClock className="size-3.5" aria-hidden="true" />
             Vigente desde {fechaCorta(active.effectiveFrom)} · {active.rules.length} reglas
           </p>
+          <div className="mt-3 border-t border-success/20 pt-3">
+            {confirmOff ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-medium text-danger">¿Desactivar esta tarifa? La categoría quedará sin tarifa vigente.</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-danger/40 text-danger hover:bg-danger/5"
+                  disabled={deactivate.isPending}
+                  onClick={() =>
+                    deactivate.mutate(active.id, {
+                      onSuccess: () => { toast.success("Tarifa desactivada"); setConfirmOff(false); },
+                      onError: () => toast.error("No se pudo desactivar"),
+                    })
+                  }
+                >
+                  Sí, desactivar
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setConfirmOff(false)}>Cancelar</Button>
+              </div>
+            ) : (
+              <Button size="sm" variant="outline" className="border-danger/40 text-danger hover:bg-danger/5" onClick={() => setConfirmOff(true)}>
+                Desactivar tarifa
+              </Button>
+            )}
+          </div>
         </div>
       ) : (
         <p className="rounded-lg border border-line bg-bg p-4 text-sm text-faint">

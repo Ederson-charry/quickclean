@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Tariff, TariffRule } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../prisma/prisma.service";
+import type { PriceRule } from "./pricing";
 import type { PublishTariffInput } from "./catalog.schemas";
 import { type PriceBreakdown, type PriceInput, computePrice } from "./pricing";
 
@@ -97,5 +98,36 @@ export class TariffService {
       throw new NotFoundException("La categoría no tiene tarifa vigente");
     }
     return computePrice(tariff.rules, input);
+  }
+
+  /** Simula el precio con un conjunto de reglas de borrador (antes de publicar). */
+  simulate(rules: PriceRule[], input: PriceInput): PriceBreakdown {
+    return computePrice(rules, input);
+  }
+
+  /** Desactiva una tarifa vigente/programada (status expired + cierra vigencia). Auditado. */
+  async deactivate(tariffId: string, actorId: string): Promise<TariffWithRules> {
+    const tariff = await this.prisma.tariff.findUnique({ where: { id: tariffId } });
+    if (!tariff) {
+      throw new NotFoundException("Tarifa no encontrada");
+    }
+    if (tariff.status === "expired") {
+      throw new BadRequestException("La tarifa ya está desactivada");
+    }
+    const updated = await this.prisma.tariff.update({
+      where: { id: tariffId },
+      data: { status: "expired", effectiveTo: new Date() },
+      include: { rules: true },
+    });
+    await this.audit.record({
+      action: "tariff.deactivate",
+      outcome: "success",
+      actorId,
+      resourceType: "tariff",
+      resourceId: tariffId,
+      before: { status: tariff.status },
+      after: { status: "expired" },
+    });
+    return updated;
   }
 }

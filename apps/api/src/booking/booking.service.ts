@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Booking } from "@prisma/client";
+import { isColombianHoliday } from "../catalog/holidays";
 import { computePrice } from "../catalog/pricing";
 import { AuditService } from "../audit/audit.service";
 import { NotificationService } from "../notifications/notification.service";
@@ -42,6 +43,7 @@ export class BookingService {
       frequency: input.frequency,
       size: input.size,
       supplies: input.supplies,
+      holiday: isColombianHoliday(input.scheduledAt),
     });
 
     const booking = await this.prisma.booking.create({
