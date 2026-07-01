@@ -46,4 +46,19 @@ describe("computePrice", () => {
     expect(r.sizeMultiplier).toBe(1);
     expect(r.total).toBe(0);
   });
+
+  it("aplica recargo festivo sobre la mano de obra (y al payout)", () => {
+    const RULES_H: PriceRule[] = [...RULES, { dimension: "holiday", key: "", modifierType: "percent", value: 0.25 }];
+    const normal = computePrice(RULES_H, { duration: 4, frequency: "unica", size: "S", supplies: false });
+    const festivo = computePrice(RULES_H, { duration: 4, frequency: "unica", size: "S", supplies: false, holiday: true });
+    expect(normal.holidaySurcharge).toBe(0);
+    expect(festivo.holidaySurcharge).toBe(Math.round(normal.labor * 0.25));
+    expect(festivo.total).toBe(normal.total + festivo.holidaySurcharge);
+    expect(festivo.payout).toBeGreaterThan(normal.payout);
+  });
+
+  it("sin regla holiday, holiday:true no cambia el precio", () => {
+    const r = computePrice(RULES, { duration: 4, frequency: "unica", size: "S", supplies: false, holiday: true });
+    expect(r.holidaySurcharge).toBe(0);
+  });
 });

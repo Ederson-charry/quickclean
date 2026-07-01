@@ -14,6 +14,8 @@ export interface PriceInput {
   size: string;
   /** ¿Incluye insumos? */
   supplies: boolean;
+  /** ¿El servicio cae en día festivo? Aplica el recargo `holiday` de la tarifa. */
+  holiday?: boolean;
 }
 
 export interface PriceBreakdown {
@@ -22,6 +24,8 @@ export interface PriceBreakdown {
   frequencyDiscount: number;
   suppliesCost: number;
   platformFee: number;
+  /** Recargo por día festivo (sobre la mano de obra). */
+  holidaySurcharge: number;
   /** Mano de obra ya ajustada por tamaño y frecuencia. */
   labor: number;
   total: number;
@@ -43,10 +47,23 @@ export function computePrice(rules: PriceRule[], input: PriceInput): PriceBreakd
   const suppliesCost = input.supplies ? (ruleValue(rules, "supplies", "") ?? 0) : 0;
   const platformFee = ruleValue(rules, "platform_fee", "") ?? 0;
   const payoutPct = ruleValue(rules, "payout_pct", "") ?? 0.7;
+  const holidayPct = ruleValue(rules, "holiday", "") ?? 0;
 
   const labor = Math.round(base * sizeMultiplier * (1 - frequencyDiscount));
-  const total = labor + suppliesCost + platformFee;
-  const payout = Math.round(labor * payoutPct);
+  const holidaySurcharge = input.holiday ? Math.round(labor * holidayPct) : 0;
+  const total = labor + suppliesCost + platformFee + holidaySurcharge;
+  // El recargo festivo también beneficia al quicker (trabaja el festivo).
+  const payout = Math.round((labor + holidaySurcharge) * payoutPct);
 
-  return { base, sizeMultiplier, frequencyDiscount, suppliesCost, platformFee, labor, total, payout };
+  return {
+    base,
+    sizeMultiplier,
+    frequencyDiscount,
+    suppliesCost,
+    platformFee,
+    holidaySurcharge,
+    labor,
+    total,
+    payout,
+  };
 }

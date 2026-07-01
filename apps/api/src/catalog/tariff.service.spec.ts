@@ -58,4 +58,25 @@ describe("TariffService (integración) — versionado", () => {
     const p = await tariffs.preview(categoryId, { duration: 4, frequency: "unica", size: "S", supplies: false });
     expect(p.total).toBe(80_000 + 6_900);
   });
+
+  it("simulate calcula con reglas de borrador (sin publicar) e incluye recargo festivo", async () => {
+    const draft = [
+      { dimension: "duration", key: "4", modifierType: "base", value: 100_000 },
+      { dimension: "platform_fee", key: "", modifierType: "flat", value: 5_000 },
+      { dimension: "holiday", key: "", modifierType: "percent", value: 0.3 },
+    ];
+    const normal = tariffs.simulate(draft, { duration: 4, frequency: "unica", size: "S", supplies: false });
+    expect(normal.total).toBe(100_000 + 5_000);
+    const festivo = tariffs.simulate(draft, { duration: 4, frequency: "unica", size: "S", supplies: false, holiday: true });
+    expect(festivo.holidaySurcharge).toBe(30_000);
+    expect(festivo.total).toBe(100_000 + 5_000 + 30_000);
+  });
+
+  it("desactiva la tarifa vigente (expired) y bloquea desactivar dos veces", async () => {
+    const active = await tariffs.getActive(categoryId);
+    const off = await tariffs.deactivate(active!.id, "admin1");
+    expect(off.status).toBe("expired");
+    expect(off.effectiveTo).not.toBeNull();
+    await expect(tariffs.deactivate(active!.id, "admin1")).rejects.toThrow();
+  });
 });

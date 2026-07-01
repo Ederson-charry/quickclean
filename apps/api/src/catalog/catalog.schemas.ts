@@ -22,7 +22,7 @@ export const UpdateCategoryInput = z.object({
 export type UpdateCategoryInput = z.infer<typeof UpdateCategoryInput>;
 
 export const TariffRuleInput = z.object({
-  dimension: z.enum(["duration", "frequency", "size", "supplies", "platform_fee", "payout_pct"]),
+  dimension: z.enum(["duration", "frequency", "size", "supplies", "platform_fee", "payout_pct", "holiday"]),
   key: z.string(),
   modifierType: z.enum(["base", "percent", "multiplier", "flat"]),
   value: z.number(),
@@ -44,5 +44,17 @@ export const PricePreviewInput = z.object({
   frequency: z.string().min(1),
   size: z.string().min(1),
   supplies: z.coerce.boolean(),
+  holiday: z.coerce.boolean().optional(),
 });
 export type PricePreviewInput = z.infer<typeof PricePreviewInput>;
+
+/** Simulación stateless: calcula el precio con reglas de borrador (antes de publicar). */
+export const SimulateTariffInput = z.object({
+  rules: z.array(TariffRuleInput).min(1),
+  duration: z.coerce.number().int().positive(),
+  frequency: z.string().min(1),
+  size: z.string().min(1),
+  supplies: z.coerce.boolean(),
+  holiday: z.coerce.boolean().optional(),
+});
+export type SimulateTariffInput = z.infer<typeof SimulateTariffInput>;
