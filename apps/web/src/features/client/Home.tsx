@@ -1,26 +1,13 @@
 import { Link } from "@tanstack/react-router";
-import {
-  Bath,
-  Brush,
-  Building2,
-  CalendarDays,
-  ChevronRight,
-  HardHat,
-  type LucideIcon,
-  MapPin,
-  Sofa,
-  Sparkles,
-  Wind,
-} from "lucide-react";
+import { CalendarDays, ChevronRight, MapPin } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState, EmptyState, ErrorState } from "@/components/shared/States";
 import { type ClientBooking, useMyReservations, useServiceCategories } from "@/hooks/catalog";
 import { useSession } from "@/stores/session";
+import { ServiceIcon } from "@/lib/serviceIcons";
 import { cop, fechaCorta } from "@/lib/format";
 import { cn } from "@/lib/utils";
-
-const ICONS: Record<string, LucideIcon> = { Sparkles, Wind, HardHat, Sofa, Bath, Brush, Building2 };
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   agendado: { label: "Agendado", className: "bg-brand-100 text-brand-700" },
@@ -90,21 +77,18 @@ export default function Home() {
           <EmptyState title="Sin servicios disponibles" hint="Pronto ampliaremos el catálogo." />
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {cats.data.map((c) => {
-              const Icon = ICONS[c.iconName] ?? Sparkles;
-              return (
-                <Link
-                  key={c.id}
-                  to="/app/reservar"
-                  className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-4 transition-all hover:border-brand-300 hover:shadow-sm"
-                >
-                  <div className="flex size-10 items-center justify-center rounded-lg bg-brand-50">
-                    <Icon className="size-5 text-brand-600" />
-                  </div>
-                  <span className="text-sm font-medium text-ink">{c.name}</span>
-                </Link>
-              );
-            })}
+            {cats.data.map((c) => (
+              <Link
+                key={c.id}
+                to="/app/reservar"
+                className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-4 transition-all hover:border-brand-300 hover:shadow-sm"
+              >
+                <div className="flex size-10 items-center justify-center rounded-lg bg-brand-50">
+                  <ServiceIcon name={c.iconName} className="size-5 text-brand-600" />
+                </div>
+                <span className="text-sm font-medium text-ink">{c.name}</span>
+              </Link>
+            ))}
           </div>
         )}
       </section>

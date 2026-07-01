@@ -1,20 +1,9 @@
 import { useBooking } from "@/stores/booking";
 import type { ServiceType } from "@/mocks/types";
 import { useServiceCategories } from "@/hooks/catalog";
+import { SERVICE_ICONS } from "@/lib/serviceIcons";
 import { cn } from "@/lib/utils";
-import {
-  Bath,
-  Brush,
-  Building2,
-  Droplets,
-  HardHat,
-  type LucideIcon,
-  Sofa,
-  Sparkles,
-  Wind,
-  Wrench,
-  Zap,
-} from "lucide-react";
+import { Droplets, type LucideIcon, Sparkles, Wrench, Zap } from "lucide-react";
 
 interface ServiceOption {
   key: string;
@@ -33,8 +22,6 @@ const DEMO_OPTIONS: ServiceOption[] = [
   { key: "plomeria", serviceType: "plomeria", label: "Plomería Express", desc: "Fugas, llaves, mantenimiento", Icon: Wrench },
   { key: "electricista", serviceType: "electricista", label: "Electricista", desc: "Tomas, interruptores, lámparas", Icon: Zap },
 ];
-
-const ICONS: Record<string, LucideIcon> = { Sparkles, Wind, HardHat, Sofa, Bath, Brush, Building2, Droplets, Wrench, Zap };
 
 // Mapea el slug real a un ServiceType del demo (para el resto del flujo mock).
 function slugToServiceType(slug: string): ServiceType {
@@ -63,7 +50,7 @@ export function Step1Tipo() {
           categoryName: c.name,
           label: c.name,
           desc: c.description ?? "Servicio de limpieza",
-          Icon: ICONS[c.iconName] ?? Sparkles,
+          Icon: SERVICE_ICONS[c.iconName] ?? Sparkles,
         }))
       : DEMO_OPTIONS;
 

@@ -1,19 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  Archive,
-  Bath,
-  Brush,
-  Building2,
-  HardHat,
-  type LucideIcon,
-  Pencil,
-  Plus,
-  RotateCcw,
-  Sofa,
-  Sparkles,
-  Tag,
-  Wind,
-} from "lucide-react";
+import { Archive, Pencil, Plus, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
@@ -35,24 +21,9 @@ import {
   useCreateCategory,
   useUpdateCategory,
 } from "@/hooks/catalog";
+import { SERVICE_ICON_NAMES, ServiceIcon } from "@/lib/serviceIcons";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/stores/session";
-
-const ICONS: Record<string, LucideIcon> = {
-  Sparkles,
-  Wind,
-  HardHat,
-  Sofa,
-  Bath,
-  Brush,
-  Building2,
-  Tag,
-};
-
-function CatIcon({ name, className }: { name: string; className?: string }) {
-  const Icon = ICONS[name] ?? Tag;
-  return <Icon className={className} aria-hidden="true" />;
-}
 
 const createSchema = z.object({
   slug: z.string().regex(/^[a-z0-9-]+$/, "minúsculas y guiones").min(2),
@@ -146,11 +117,36 @@ function CategoryDialog({ open, cat, onClose }: { open: boolean; cat: ServiceCat
             <Label htmlFor="s-desc" className="text-xs text-ink-2">Descripción (opcional)</Label>
             <Textarea id="s-desc" rows={2} value={form.description} onChange={(e) => set("description")(e.target.value)} />
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="s-icon" className="text-xs text-ink-2">Icono (lucide)</Label>
-              <Input id="s-icon" placeholder="Sparkles" value={form.iconName} onChange={(e) => set("iconName")(e.target.value)} />
+          {/* Selector visual de icono */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <Label className="text-xs text-ink-2">Icono</Label>
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-brand-50 px-2 py-0.5 text-xs text-brand-700">
+                <ServiceIcon name={form.iconName} className="size-3.5" /> {form.iconName}
+              </span>
             </div>
+            <div className="grid grid-cols-6 gap-2 rounded-lg border border-line p-2 sm:grid-cols-8">
+              {SERVICE_ICON_NAMES.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  title={name}
+                  aria-label={name}
+                  aria-pressed={form.iconName === name}
+                  onClick={() => set("iconName")(name)}
+                  className={cn(
+                    "flex aspect-square items-center justify-center rounded-md border transition-colors",
+                    form.iconName === name
+                      ? "border-brand-600 bg-brand-50 text-brand-700"
+                      : "border-transparent text-ink-2 hover:bg-bg hover:text-ink",
+                  )}
+                >
+                  <ServiceIcon name={name} className="size-5" />
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="s-color" className="text-xs text-ink-2">Color (token)</Label>
               <Input id="s-color" placeholder="brand-600" value={form.colorToken} onChange={(e) => set("colorToken")(e.target.value)} />
@@ -191,7 +187,7 @@ function CategoryCard({ cat, onEdit }: { cat: ServiceCategory; onEdit: () => voi
       )}
     >
       <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-50">
-        <CatIcon name={cat.iconName} className="size-5 text-brand-600" />
+        <ServiceIcon name={cat.iconName} className="size-5 text-brand-600" />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
