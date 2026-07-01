@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Calculator, CalendarClock, Plus, ReceiptText, Tag, Trash2 } from "lucide-react";
+import { Calculator, CalendarClock, Info, Plus, ReceiptText, Tag, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/States";
 import {
   type PriceBreakdown,
@@ -190,12 +191,15 @@ const DIMENSION_OPTS = [
   { v: "payout_pct", l: "Pago quicker (%)" },
   { v: "holiday", l: "Recargo festivo (%)" },
 ];
+const dimLabel = (v: string) => DIMENSION_OPTS.find((o) => o.v === v)?.l ?? v;
+
 const MODIFIER_OPTS = [
-  { v: "base", l: "base" },
-  { v: "percent", l: "%" },
-  { v: "multiplier", l: "×" },
-  { v: "flat", l: "fijo" },
+  { v: "base", l: "Base ($)" },
+  { v: "percent", l: "Porcentaje (%)" },
+  { v: "multiplier", l: "Multiplicador (×)" },
+  { v: "flat", l: "Fijo ($)" },
 ];
+const modLabel = (v: string) => MODIFIER_OPTS.find((o) => o.v === v)?.l ?? v;
 
 // Dimensiones "globales": un único valor para toda la tarifa → la clave va vacía.
 const SCALAR_DIMS = new Set(["supplies", "platform_fee", "payout_pct", "holiday"]);
@@ -437,7 +441,31 @@ function PublishDialog({
 
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <Label className="text-xs text-ink-2">Reglas de precio</Label>
+              <div className="flex items-center gap-1.5">
+                <Label className="text-xs text-ink-2">Reglas de precio</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger
+                      type="button"
+                      className="text-faint transition-colors hover:text-brand-600 focus-visible:outline-none focus-visible:text-brand-600"
+                      aria-label="Cómo funcionan las reglas"
+                    >
+                      <Info className="size-3.5" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="mb-1 font-semibold">Cómo funciona una regla</p>
+                      <p className="mb-1">
+                        <b>Dimensión</b>: qué define (duración, tamaño, comisión…). <b>Clave</b>: la variante (4h, M,
+                        semanal…) — solo para duración, frecuencia y tamaño. <b>Modificador</b> y <b>valor</b>: cómo se
+                        aplica.
+                      </p>
+                      <p className="text-white/80">
+                        Comisión, pago quicker, insumos y festivo son valores únicos → van sin clave.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <Button
                 type="button"
                 variant="outline"
@@ -447,10 +475,6 @@ function PublishDialog({
                 <Plus className="size-4" /> Regla
               </Button>
             </div>
-            <p className="mb-2 text-[11px] text-faint">
-              La <b>clave</b> solo aplica a dimensiones con variantes: duración (4, 6…), frecuencia (unica, semanal…),
-              tamaño (S, M, L). Comisión, pago quicker, insumos y festivo son valores únicos → sin clave.
-            </p>
             <div className="space-y-2">
               {rules.map((r, i) => (
                 <div
@@ -465,7 +489,7 @@ function PublishDialog({
                     }}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue>{(v) => dimLabel(v as string)}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {DIMENSION_OPTS.map((o) => (
@@ -484,7 +508,7 @@ function PublishDialog({
                   />
                   <Select value={r.modifierType} onValueChange={(v) => setRule(i, { modifierType: v ?? "base" })}>
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue>{(v) => modLabel(v as string)}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {MODIFIER_OPTS.map((o) => (
