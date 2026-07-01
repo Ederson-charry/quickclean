@@ -60,3 +60,49 @@ export const SimulateTariffInput = z.object({
   holiday: z.coerce.boolean().optional(),
 });
 export type SimulateTariffInput = z.infer<typeof SimulateTariffInput>;
+
+// ─── Modelo de componentes (composable) ──────────────────────────────────────
+export const TariffComponentInput = z.object({
+  code: z.string().min(1).max(40),
+  order: z.number().int(),
+  label: z.string().trim().min(1).max(80),
+  nature: z.enum(["base", "cost", "discount"]),
+  valueType: z.enum(["table", "fixed", "percent"]),
+  value: z.number().default(0),
+  durationTable: z.record(z.string(), z.number()).nullish(),
+  appliesOn: z.enum(["base", "subtotal", "selection"]).default("base"),
+  appliesOnRefs: z.array(z.object({ code: z.string(), op: z.enum(["add", "sub"]) })).nullish(),
+  condParam: z.enum(["size", "frequency", "duration", "supplies", "holiday"]).nullish(),
+  condValue: z.string().nullish(),
+  countsForPayout: z.boolean().default(true),
+  visibleToClient: z.boolean().default(true),
+});
+export type TariffComponentInput = z.infer<typeof TariffComponentInput>;
+
+const payoutFields = {
+  payoutType: z.enum(["percent", "fixed"]),
+  payoutValue: z.number(),
+};
+
+/** Publica una nueva versión con el modelo de componentes. */
+export const PublishComponentsInput = z.object({
+  serviceCategoryId: z.string().uuid(),
+  name: z.string().min(2),
+  effectiveFrom: z.coerce.date(),
+  ...payoutFields,
+  components: z.array(TariffComponentInput).min(1),
+  otp: z.string().length(6).optional(),
+});
+export type PublishComponentsInput = z.infer<typeof PublishComponentsInput>;
+
+/** Simulación con componentes de borrador. */
+export const SimulateComponentsInput = z.object({
+  ...payoutFields,
+  components: z.array(TariffComponentInput).min(1),
+  duration: z.coerce.number().int().positive(),
+  frequency: z.string().min(1),
+  size: z.string().min(1),
+  supplies: z.coerce.boolean(),
+  holiday: z.coerce.boolean().optional(),
+});
+export type SimulateComponentsInput = z.infer<typeof SimulateComponentsInput>;

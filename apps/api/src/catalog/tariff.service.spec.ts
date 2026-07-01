@@ -2,7 +2,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { CatalogService } from "./catalog.service";
-import { PublishTariffInput } from "./catalog.schemas";
+import { PublishComponentsInput, type TariffComponentInput } from "./catalog.schemas";
+import type { PayoutConfig } from "./components";
 import { TariffService } from "./tariff.service";
 
 describe("TariffService (integración) — versionado", () => {
@@ -11,12 +12,42 @@ describe("TariffService (integración) — versionado", () => {
   const catalog = new CatalogService(prisma);
   let categoryId: string;
 
-  const rules = [
-    { dimension: "duration", key: "4", modifierType: "base", value: 80_000 },
-    { dimension: "platform_fee", key: "", modifierType: "flat", value: 6_900 },
+  // Base $80.000 (por 4h) + comisión fija $6.900 que no cuenta para el pago.
+  const components: TariffComponentInput[] = [
+    {
+      code: "base",
+      order: 0,
+      label: "Tarifa base",
+      nature: "base",
+      valueType: "table",
+      value: 0,
+      durationTable: { "4": 80_000 },
+      appliesOn: "base",
+      countsForPayout: true,
+      visibleToClient: true,
+    },
+    {
+      code: "comision",
+      order: 1,
+      label: "Comisión de plataforma",
+      nature: "cost",
+      valueType: "fixed",
+      value: 6_900,
+      appliesOn: "base",
+      countsForPayout: false,
+      visibleToClient: true,
+    },
   ];
+  const payout: PayoutConfig = { type: "percent", value: 0.7 };
   const input = (name: string, effectiveFrom: Date) =>
-    PublishTariffInput.parse({ serviceCategoryId: categoryId, name, effectiveFrom, rules });
+    PublishComponentsInput.parse({
+      serviceCategoryId: categoryId,
+      name,
+      effectiveFrom,
+      payoutType: payout.type,
+      payoutValue: payout.value,
+      components,
+    });
 
   beforeAll(async () => {
     await prisma.onModuleInit();
@@ -38,6 +69,7 @@ describe("TariffService (integración) — versionado", () => {
   it("publica v1 como activa", async () => {
     const v1 = await tariffs.publish(input("v1", new Date(Date.now() - 1000)), "admin1");
     expect(v1.status).toBe("active");
+    expect(v1.components.length).toBe(2);
     expect((await tariffs.getActive(categoryId))?.id).toBe(v1.id);
   });
 
@@ -59,16 +91,51 @@ describe("TariffService (integración) — versionado", () => {
     expect(p.total).toBe(80_000 + 6_900);
   });
 
-  it("simulate calcula con reglas de borrador (sin publicar) e incluye recargo festivo", async () => {
-    const draft = [
-      { dimension: "duration", key: "4", modifierType: "base", value: 100_000 },
-      { dimension: "platform_fee", key: "", modifierType: "flat", value: 5_000 },
-      { dimension: "holiday", key: "", modifierType: "percent", value: 0.3 },
+  it("simulate calcula con componentes de borrador (sin publicar) e incluye recargo festivo", async () => {
+    // Base $100.000 + comisión $5.000 + recargo festivo 30% sobre subtotal.
+    const draft: TariffComponentInput[] = [
+      {
+        code: "base",
+        order: 0,
+        label: "Tarifa base",
+        nature: "base",
+        valueType: "table",
+        value: 0,
+        durationTable: { "4": 100_000 },
+        appliesOn: "base",
+        countsForPayout: true,
+        visibleToClient: true,
+      },
+      {
+        code: "festivo",
+        order: 1,
+        label: "Recargo festivo",
+        nature: "cost",
+        valueType: "percent",
+        value: 0.3,
+        appliesOn: "subtotal",
+        condParam: "holiday",
+        condValue: "true",
+        countsForPayout: true,
+        visibleToClient: true,
+      },
+      {
+        code: "comision",
+        order: 2,
+        label: "Comisión",
+        nature: "cost",
+        valueType: "fixed",
+        value: 5_000,
+        appliesOn: "base",
+        countsForPayout: false,
+        visibleToClient: true,
+      },
     ];
-    const normal = tariffs.simulate(draft, { duration: 4, frequency: "unica", size: "S", supplies: false });
+    const normal = tariffs.simulate(draft, payout, { duration: 4, frequency: "unica", size: "S", supplies: false });
     expect(normal.total).toBe(100_000 + 5_000);
-    const festivo = tariffs.simulate(draft, { duration: 4, frequency: "unica", size: "S", supplies: false, holiday: true });
-    expect(festivo.holidaySurcharge).toBe(30_000);
+    const festivo = tariffs.simulate(draft, payout, { duration: 4, frequency: "unica", size: "S", supplies: false, holiday: true });
+    const surcharge = festivo.lines.find((l) => l.code === "festivo");
+    expect(surcharge?.amount).toBe(30_000);
     expect(festivo.total).toBe(100_000 + 5_000 + 30_000);
   });
 

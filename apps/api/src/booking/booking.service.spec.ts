@@ -25,10 +25,12 @@ describe("BookingService (integración) — snapshot de tarifa", () => {
         name: "v1",
         effectiveFrom: new Date(Date.now() - 1000),
         status: "active",
-        rules: {
+        payoutType: "percent",
+        payoutValue: 0.7,
+        components: {
           create: [
-            { dimension: "duration", key: "4", modifierType: "base", value: 80_000 },
-            { dimension: "platform_fee", key: "", modifierType: "flat", value: 6_900 },
+            { order: 0, code: "base", label: "Base", nature: "base", valueType: "table", value: 0, durationTable: { "4": 80_000 }, appliesOn: "base", countsForPayout: true, visibleToClient: true },
+            { order: 1, code: "comision", label: "Comisión", nature: "cost", valueType: "fixed", value: 6_900, appliesOn: "base", countsForPayout: false, visibleToClient: true },
           ],
         },
       },
@@ -72,7 +74,11 @@ describe("BookingService (integración) — snapshot de tarifa", () => {
         name: "v2",
         effectiveFrom: new Date(),
         status: "active",
-        rules: { create: [{ dimension: "duration", key: "4", modifierType: "base", value: 120_000 }] },
+        payoutType: "percent",
+        payoutValue: 0.7,
+        components: {
+          create: [{ order: 0, code: "base", label: "Base", nature: "base", valueType: "table", value: 0, durationTable: { "4": 120_000 }, appliesOn: "base", countsForPayout: true, visibleToClient: true }],
+        },
       },
     });
     const b = await prisma.booking.findUnique({ where: { id: bookingId } });

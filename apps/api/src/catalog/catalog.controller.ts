@@ -21,7 +21,13 @@ export class CatalogController {
   preview(@Body() body: unknown) {
     const input = PricePreviewInput.parse(body);
     // Si se envió la fecha, el festivo se determina en el backend (fuente única).
-    const holiday = input.scheduledAt ? isColombianHoliday(input.scheduledAt) : input.holiday;
-    return this.tariffs.preview(input.serviceCategoryId, { ...input, holiday });
+    const holiday = input.scheduledAt ? isColombianHoliday(input.scheduledAt) : (input.holiday ?? false);
+    return this.tariffs.preview(input.serviceCategoryId, {
+      duration: input.duration,
+      frequency: input.frequency,
+      size: input.size,
+      supplies: input.supplies,
+      holiday,
+    });
   }
 }
