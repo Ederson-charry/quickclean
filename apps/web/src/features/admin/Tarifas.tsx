@@ -244,6 +244,88 @@ const publishSchema = z.object({
   otp: z.string().optional(),
 });
 
+// Desglose "de dónde sale cada valor" de la simulación.
+function pct(n: number): string {
+  return `${Math.round(n * 100)}%`;
+}
+
+function SimBreakdown({ b, duration, size }: { b: PriceBreakdown; duration: string; size: string }) {
+  const freqFactor = 1 - b.frequencyDiscount;
+  return (
+    <div className="mt-3 space-y-2 border-t border-brand-200 pt-3 text-sm">
+      <p className="text-xs font-semibold text-brand-700">¿De dónde sale cada valor?</p>
+
+      {/* Mano de obra */}
+      <div className="rounded-md bg-white/70 p-2">
+        <div className="flex justify-between text-ink-2">
+          <span>Base ({duration}h)</span>
+          <span className="font-mono">{cop(b.base)}</span>
+        </div>
+        <div className="flex justify-between text-ink-2">
+          <span>× Ajuste por tamaño ({size})</span>
+          <span className="font-mono">× {b.sizeMultiplier}</span>
+        </div>
+        {b.frequencyDiscount > 0 && (
+          <div className="flex justify-between text-ink-2">
+            <span>× (1 − descuento frecuencia {pct(b.frequencyDiscount)})</span>
+            <span className="font-mono">× {freqFactor.toFixed(2)}</span>
+          </div>
+        )}
+        <div className="mt-1 flex justify-between border-t border-line pt-1 font-medium text-ink">
+          <span>= Mano de obra</span>
+          <span className="font-mono">{cop(b.labor)}</span>
+        </div>
+      </div>
+
+      {/* Conceptos que suman al total */}
+      {b.suppliesCost > 0 && (
+        <div className="flex items-center justify-between">
+          <span className="text-ink-2">Insumos (valor fijo)</span>
+          <span className="font-mono text-ink">+ {cop(b.suppliesCost)}</span>
+        </div>
+      )}
+      {b.holidaySurcharge > 0 && (
+        <div className="flex items-center justify-between">
+          <span className="text-ink-2">
+            Recargo festivo <span className="text-[11px] text-faint">(Mano de obra × {pct(b.holidayPct)})</span>
+          </span>
+          <span className="font-mono text-warning">+ {cop(b.holidaySurcharge)}</span>
+        </div>
+      )}
+      <div className="flex items-center justify-between">
+        <span className="text-ink-2">Comisión plataforma (valor fijo)</span>
+        <span className="font-mono text-ink">+ {cop(b.platformFee)}</span>
+      </div>
+
+      {/* Total */}
+      <div className="rounded-md bg-brand-100/70 p-2">
+        <div className="flex justify-between font-semibold text-ink">
+          <span>Total al cliente</span>
+          <span className="font-mono">{cop(b.total)}</span>
+        </div>
+        <p className="mt-0.5 text-[11px] text-ink-2">
+          {cop(b.labor)}
+          {b.suppliesCost > 0 ? ` + ${cop(b.suppliesCost)} insumos` : ""}
+          {b.holidaySurcharge > 0 ? ` + ${cop(b.holidaySurcharge)} festivo` : ""}
+          {` + ${cop(b.platformFee)} comisión`}
+        </p>
+      </div>
+
+      {/* Pago al quicker */}
+      <div className="rounded-md bg-white/70 p-2">
+        <div className="flex justify-between font-medium text-ink">
+          <span>Pago al quicker <span className="text-[11px] text-faint">({pct(b.payoutPct)})</span></span>
+          <span className="font-mono text-success">{cop(b.payout)}</span>
+        </div>
+        <p className="mt-0.5 text-[11px] text-ink-2">
+          ({cop(b.labor)}
+          {b.holidaySurcharge > 0 ? ` + ${cop(b.holidaySurcharge)} festivo` : ""}) × {pct(b.payoutPct)}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function PublishDialog({
   categoryId,
   active,
@@ -440,18 +522,7 @@ function PublishDialog({
                 {simulate.isPending ? "Calculando…" : "Simular"}
               </Button>
             </div>
-            {simResult && (
-              <div className="mt-3 space-y-1 border-t border-brand-200 pt-2 text-sm">
-                <PriceRow label="Mano de obra" value={cop(simResult.labor)} />
-                {simResult.suppliesCost > 0 && <PriceRow label="Insumos" value={cop(simResult.suppliesCost)} />}
-                {simResult.holidaySurcharge > 0 && (
-                  <PriceRow label="Recargo festivo" value={cop(simResult.holidaySurcharge)} />
-                )}
-                <PriceRow label="Comisión plataforma" value={cop(simResult.platformFee)} />
-                <PriceRow label="Total al cliente" value={cop(simResult.total)} strong />
-                <PriceRow label="Pago al quicker" value={cop(simResult.payout)} />
-              </div>
-            )}
+            {simResult && <SimBreakdown b={simResult} duration={sim.duration} size={sim.size} />}
           </div>
 
           <div className="space-y-1.5">

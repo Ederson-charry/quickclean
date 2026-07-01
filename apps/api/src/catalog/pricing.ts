@@ -24,11 +24,15 @@ export interface PriceBreakdown {
   frequencyDiscount: number;
   suppliesCost: number;
   platformFee: number;
+  /** % de recargo festivo aplicado (0 si no aplica o no hay regla). */
+  holidayPct: number;
   /** Recargo por día festivo (sobre la mano de obra). */
   holidaySurcharge: number;
   /** Mano de obra ya ajustada por tamaño y frecuencia. */
   labor: number;
   total: number;
+  /** % que recibe el quicker sobre (mano de obra + recargo festivo). */
+  payoutPct: number;
   payout: number;
 }
 
@@ -61,9 +65,11 @@ export function computePrice(rules: PriceRule[], input: PriceInput): PriceBreakd
     frequencyDiscount,
     suppliesCost,
     platformFee,
+    holidayPct: input.holiday ? holidayPct : 0,
     holidaySurcharge,
     labor,
     total,
+    payoutPct,
     payout,
   };
 }

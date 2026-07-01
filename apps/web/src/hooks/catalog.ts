@@ -104,9 +104,11 @@ export interface PriceBreakdown {
   frequencyDiscount: number;
   suppliesCost: number;
   platformFee: number;
+  holidayPct: number;
   holidaySurcharge: number;
   labor: number;
   total: number;
+  payoutPct: number;
   payout: number;
 }
 
