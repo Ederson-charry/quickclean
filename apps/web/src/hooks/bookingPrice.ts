@@ -8,6 +8,16 @@ export interface BookingPriceInput {
   supplies: boolean;
   size?: string;
   serviceCategoryId?: string;
+  /** Fecha (YYYY-MM-DD) del servicio; con ella el backend aplica el recargo festivo. */
+  date?: string;
+  /** Hora (HH:mm) del servicio. */
+  time?: string;
+}
+
+/** ISO del servicio a partir de fecha + hora del borrador (mediodía si falta la hora). */
+function toScheduledAt(date?: string, time?: string): string | undefined {
+  if (!date) return undefined;
+  return new Date(`${date}T${time ?? "12:00"}:00`).toISOString();
 }
 
 // Mapea los enums del demo a las claves de las reglas del backend.
@@ -33,6 +43,7 @@ export function useBookingPrice(draft: BookingPriceInput): BookingPrice {
         frequency: mapFrequency(draft.frequency),
         size: mapSize(draft.size),
         supplies: draft.supplies,
+        scheduledAt: toScheduledAt(draft.date, draft.time),
       }
     : null;
   const { data: real } = usePricePreview(input);

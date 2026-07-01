@@ -45,6 +45,8 @@ export const PricePreviewInput = z.object({
   size: z.string().min(1),
   supplies: z.coerce.boolean(),
   holiday: z.coerce.boolean().optional(),
+  /** Fecha del servicio: si se envía, el backend determina si es festivo. */
+  scheduledAt: z.coerce.date().optional(),
 });
 export type PricePreviewInput = z.infer<typeof PricePreviewInput>;
 

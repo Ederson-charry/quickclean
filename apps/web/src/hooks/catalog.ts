@@ -117,6 +117,8 @@ export interface PreviewInput {
   size: string;
   supplies: boolean;
   holiday?: boolean;
+  /** Fecha ISO del servicio; si se envía, el backend determina si es festivo. */
+  scheduledAt?: string;
 }
 
 export interface SimulateRule {
