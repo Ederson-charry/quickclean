@@ -258,11 +258,39 @@ model Tariff {
   publishedBy       String?
   publishedAt       DateTime?
   createdAt         DateTime        @default(now())
-  rules             TariffRule[]
+  /// Config del pago al quicker (modelo de componentes).
+  payoutType        String          @default("percent") // percent | fixed
+  payoutValue       Float           @default(0.7)
+  rules             TariffRule[] // deprecado: reemplazado por components (se elimina en fase posterior)
+  components        TariffComponent[]
   bookings          Booking[]
 
   @@index([serviceCategoryId])
   @@index([status])
+}
+
+/// Componente de una tarifa (modelo composable). Una tarifa es una lista ordenada:
+/// base (tabla por duración) + costos/descuentos (fijos o %), donde cada % declara
+/// su base de cálculo (base | subtotal | selección con signos) y una condición opcional.
+model TariffComponent {
+  id              String  @id @default(uuid())
+  tariffId        String
+  tariff          Tariff  @relation(fields: [tariffId], references: [id], onDelete: Cascade)
+  order           Int
+  code            String // slug estable dentro de la tarifa (para referenciar en selección)
+  label           String
+  nature          String // base | cost | discount
+  valueType       String // table | fixed | percent
+  value           Float   @default(0) // fracción (percent) o monto (fixed)
+  durationTable   Json? // { "4": 79900, "6": 109900 } — solo base tipo table
+  appliesOn       String  @default("base") // base | subtotal | selection — solo percent
+  appliesOnRefs   Json? // [{ code, op: "add"|"sub" }] — solo selection
+  condParam       String? // size | frequency | duration | supplies | holiday
+  condValue       String?
+  countsForPayout Boolean @default(true)
+  visibleToClient Boolean @default(true)
+
+  @@index([tariffId])
 }
 
 /// Regla de precio de una tarifa (dimensión + clave + modificador).
