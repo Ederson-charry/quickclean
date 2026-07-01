@@ -197,6 +197,16 @@ const MODIFIER_OPTS = [
   { v: "flat", l: "fijo" },
 ];
 
+// Dimensiones "globales": un único valor para toda la tarifa → la clave va vacía.
+const SCALAR_DIMS = new Set(["supplies", "platform_fee", "payout_pct", "holiday"]);
+// Ejemplos de clave para las dimensiones con variantes.
+const KEY_PLACEHOLDER: Record<string, string> = {
+  duration: "4, 6, 8…",
+  frequency: "unica, semanal…",
+  size: "S, M, L",
+};
+const isScalar = (dim: string) => SCALAR_DIMS.has(dim);
+
 interface EditRule {
   dimension: string;
   key: string;
@@ -362,7 +372,7 @@ function PublishDialog({
       {
         rules: rules.map((r) => ({
           dimension: r.dimension,
-          key: r.key,
+          key: isScalar(r.dimension) ? "" : r.key,
           modifierType: r.modifierType,
           value: Number(r.value) || 0,
         })),
@@ -390,7 +400,7 @@ function PublishDialog({
         serviceCategoryId: categoryId,
         name: parsed.data.name,
         effectiveFrom: new Date(parsed.data.effectiveFrom).toISOString(),
-        rules: parsed.data.rules,
+        rules: parsed.data.rules.map((r) => ({ ...r, key: isScalar(r.dimension) ? "" : r.key })),
         otp: parsed.data.otp || undefined,
       },
       {
@@ -437,13 +447,23 @@ function PublishDialog({
                 <Plus className="size-4" /> Regla
               </Button>
             </div>
+            <p className="mb-2 text-[11px] text-faint">
+              La <b>clave</b> solo aplica a dimensiones con variantes: duración (4, 6…), frecuencia (unica, semanal…),
+              tamaño (S, M, L). Comisión, pago quicker, insumos y festivo son valores únicos → sin clave.
+            </p>
             <div className="space-y-2">
               {rules.map((r, i) => (
                 <div
                   key={i}
                   className="grid grid-cols-[1fr_auto] items-end gap-2 rounded-lg border border-line p-2 sm:grid-cols-[1.4fr_0.8fr_1fr_0.9fr_auto]"
                 >
-                  <Select value={r.dimension} onValueChange={(v) => setRule(i, { dimension: v ?? "duration" })}>
+                  <Select
+                    value={r.dimension}
+                    onValueChange={(v) => {
+                      const dim = v ?? "duration";
+                      setRule(i, { dimension: dim, key: isScalar(dim) ? "" : r.key });
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -455,7 +475,13 @@ function PublishDialog({
                       ))}
                     </SelectContent>
                   </Select>
-                  <Input placeholder="clave" value={r.key} onChange={(e) => setRule(i, { key: e.target.value })} />
+                  <Input
+                    placeholder={isScalar(r.dimension) ? "(sin clave)" : (KEY_PLACEHOLDER[r.dimension] ?? "clave")}
+                    value={isScalar(r.dimension) ? "" : r.key}
+                    onChange={(e) => setRule(i, { key: e.target.value })}
+                    disabled={isScalar(r.dimension)}
+                    title={isScalar(r.dimension) ? "Esta dimensión es un valor único: no lleva clave" : undefined}
+                  />
                   <Select value={r.modifierType} onValueChange={(v) => setRule(i, { modifierType: v ?? "base" })}>
                     <SelectTrigger>
                       <SelectValue />
