@@ -10,6 +10,8 @@ interface PriceSummaryProps {
   supplies: boolean;
   size?: string;
   serviceCategoryId?: string;
+  date?: string;
+  time?: string;
   className?: string;
 }
 
@@ -26,9 +28,12 @@ export function PriceSummary({
   supplies,
   size,
   serviceCategoryId,
+  date,
+  time,
   className,
 }: PriceSummaryProps) {
-  const price = useBookingPrice({ duration, frequency, supplies, size, serviceCategoryId });
+  const price = useBookingPrice({ duration, frequency, supplies, size, serviceCategoryId, date, time });
+  const holiday = price.breakdown?.holidaySurcharge ?? 0;
 
   return (
     <div className={`rounded-xl border border-line bg-surface p-4 ${className ?? ""}`}>
@@ -56,6 +61,9 @@ export function PriceSummary({
             {price.breakdown.suppliesCost > 0 && (
               <Row label="Implementos de aseo" value={cop(price.breakdown.suppliesCost)} />
             )}
+            {holiday > 0 && (
+              <Row label="Recargo día festivo" value={cop(holiday)} valueClass="text-warning" />
+            )}
             <Row label="Tarifa plataforma" value={cop(price.breakdown.platformFee)} valueClass="text-ink-2" />
           </>
         ) : (
@@ -73,6 +81,12 @@ export function PriceSummary({
           </>
         )}
       </div>
+
+      {holiday > 0 && (
+        <p className="mt-2 rounded-md bg-warning/10 px-2 py-1 text-center text-xs font-medium text-warning">
+          🎉 Día festivo — aplica recargo
+        </p>
+      )}
 
       <Separator className="my-3" />
 
